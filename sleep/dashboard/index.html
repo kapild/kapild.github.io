@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Sleep Dashboard</title>
+<style>
+body{margin:0;background:#F1F2F4;font-family:'IBM Plex Sans',system-ui,sans-serif}
+#boot{padding:40px 24px;font:13px 'IBM Plex Mono',monospace;color:#5A6170}
+#views{max-width:1440px;margin:0 auto;padding:16px 24px 0;display:flex;gap:6px;flex-wrap:wrap}
+#views a{display:inline-flex;align-items:center;min-height:40px;padding:0 14px;border:1px solid #111418;border-radius:4px;font-size:13px;font-weight:600;color:#111418;background:#fff;text-decoration:none}
+#views a[aria-current="page"]{background:#111418;color:#fff}
+#views a:focus-visible{outline:2px solid #2459C6;outline-offset:2px}
+#analysis{max-width:1440px;margin:0 auto;padding:28px 24px 48px}
+</style>
+</head>
+<body>
+<nav id="views" aria-label="View">
+  <a href="#sleep" data-view="sleep">Sleep report</a>
+  <a href="#cpap" data-view="cpap">CPAP &amp; oxygen</a>
+  <a href="#overlay" data-view="overlay">Night overlay</a>
+  <a href="#breathing" data-view="breathing">Breathing analysis</a>
+</nav>
+<div id="root"><div id="boot">Loading dashboard…</div></div>
+<div id="analysis" hidden><div id="boot">Loading breathing data…</div></div>
+<script>
+// Renders a canvas artboard (.dc.html) as a plain page: the same markup and
+// Component class the canvas runs, with a small runtime for {{holes}},
+// <sc-for>, <sc-if> and on* handlers. Data is read from ../data/nights.json and,
+// for the CPAP / O2 ring overlay and the breathing analysis, ../data/apnea.json.
+(function () {
+  const ARTBOARD = './Clinical.dc.html';
+  const DATA_URL = '../data/nights.json';
+  const APNEA_URL = '../data/apnea.json';
+  const EV = { onclick: 'click', onmouseenter: 'mouseenter', onmouseleave: 'mouseleave', onchange: 'change', oninput: 'input' };
+  const WHOLE = /^\s*\{\{\s*([^}]+?)\s*\}\}\s*$/, HOLE = /\{\{\s*([^}]+?)\s*\}\}/g;
+  const root = document.getElementById('root');
+
+  function lookup(path, scope) {
+    if (path === 'true') return true;
+    if (path === 'false') return false;
+    if (path === 'null') return null;
+    if (/^-?\d+(\.\d+)?$/.test(path)) return +path;
+    if (/^(['"]).*\1$/.test(path)) return path.slice(1, -1);
+    let v = scope;
+    for (const k of path.split('.')) { if (v == null) return undefined; v = v[k]; }
+    return v;
+  }
+  const text = (str, scope) => str.replace(HOLE, (_, p) => { const x = lookup(p, scope); return x == null ? '' : String(x); });
+  function value(str, scope) {
+    const m = str.match(WHOLE);
+    return m ? lookup(m[1], scope) : text(str, scope);
+  }
+  const truthy = v => !!v && v !== 'false';
+
+  function renderChildren(src, scope, out) { for (const c of src.childNodes) renderNode(c, scope, out); }
+  function renderNode(n, scope, out) {
+    if (n.nodeType === 3) {
+      out.appendChild(n.data.indexOf('{{') < 0 ? n.cloneNode() : document.createTextNode(text(n.data, scope)));
+      return;
+    }
+    if (n.nodeType !== 1) return;
+    const tag = n.localName;
+    if (tag === 'sc-if') { if (truthy(value(n.getAttribute('value'), scope))) renderChildren(n, scope, out); return; }
+    if (tag === 'sc-for') {
+      const as = n.getAttribute('as');
+      (value(n.getAttribute('list'), scope) || []).forEach((it, i) => {
+        const s = Object.create(scope); s[as] = it; s.$index = i;
+        renderChildren(n, s, out);
+      });
+      return;
+    }
+    const el = document.createElementNS(n.namespaceURI, tag);
+    let selectValue;
+    for (const a of n.attributes) {
+      const name = a.name;
+      if (name.startsWith('hint-')) continue;
+      if (EV[name]) { const f = value(a.value, scope); if (typeof f === 'function') el.addEventListener(EV[name], f); continue; }
+      const v = a.value.indexOf('{{') < 0 ? a.value : value(a.value, scope);
+      if (name === 'data-options') {
+        const p = v.split('|'), list = lookup(p[0], scope) || [];
+        list.forEach(o => { const op = document.createElement('option'); op.value = o[p[1]]; op.textContent = o[p[2]]; el.appendChild(op); });
+        continue;
+      }
+      if (tag === 'select' && name === 'value') { selectValue = v; continue; }
+      if (name === 'disabled') { if (truthy(v)) el.setAttribute(name, ''); continue; }
+      if (v == null || v === false) continue;
+      el.setAttribute(name, v === true ? '' : String(v));
+    }
+    renderChildren(n, scope, el);
+    if (selectValue != null) el.value = selectValue;
+    out.appendChild(el);
+  }
+
+  function boot(text) {
+    const doc = new DOMParser().parseFromString(text, 'text/html');
+    // helmet → <head>
+    const helmet = doc.querySelector('helmet');
+    if (helmet) for (const c of Array.from(helmet.children)) document.head.appendChild(document.importNode(c, true));
+    // markup: <sc-for> can't live inside <select> in parsed HTML, so options come from data-options
+    let markup = text.slice(text.indexOf('<x-dc>') + 6, text.indexOf('</x-dc>')).replace(/<helmet>[\s\S]*?<\/helmet>/, '');
+    markup = markup.replace(/(<select[^>]*?)>\s*<sc-for list="\{\{\s*(\w+)\s*\}\}"[^>]*>\s*<option value="\{\{\s*\w+\.(\w+)\s*\}\}">\{\{\s*\w+\.(\w+)\s*\}\}<\/option>\s*<\/sc-for>\s*<\/select>/,
+      '$1 data-options="$2|$3|$4"></select>');
+    const tpl = document.createElement('template');
+    tpl.innerHTML = markup;
+    // component
+    const script = doc.querySelector('script[data-dc-script]');
+    const defs = JSON.parse(script.getAttribute('data-props') || '{}');
+    const props = {};
+    Object.keys(defs).forEach(k => { if (k[0] !== '$' && defs[k] && 'default' in defs[k]) props[k] = defs[k].default; });
+    let queued = false, inst;
+    // a microtask batches setState calls from one event and, unlike requestAnimationFrame, still runs in a background tab
+    const schedule = () => { if (!queued) { queued = true; queueMicrotask(render); } };
+    class DCLogic {
+      constructor(p) { this.props = p; this.state = {}; }
+      setState(patch) {
+        const s = this.state || {};
+        if (Object.keys(patch).every(k => s[k] === patch[k])) return;
+        this.state = Object.assign({}, s, patch);
+        schedule();
+      }
+      forceUpdate() { schedule(); }
+    }
+    const Component = new Function('DCLogic', script.textContent + '\nreturn Component;')(DCLogic);
+    Component.prototype.dataUrl = () => DATA_URL;
+    Component.prototype.apneaUrl = () => APNEA_URL;
+    inst = new Component(props);
+    function render() {
+      queued = false;
+      const frag = document.createDocumentFragment();
+      renderChildren(tpl.content, inst.renderVals(), frag);
+      root.replaceChildren(frag);
+    }
+    render();
+    if (inst.componentDidMount) inst.componentDidMount();
+  }
+
+  // views: the sleep report (artboard) and the breathing views (breathing.js: a · b · c)
+  const BREATH = { cpap: 'a', overlay: 'b', breathing: 'c' };
+  const analysis = document.getElementById('analysis');
+  let views = null, loading = false, current = 'sleep';
+  function route() {
+    const v = BREATH[location.hash.slice(1)] ? location.hash.slice(1) : 'sleep';
+    current = v;
+    document.querySelectorAll('#views a').forEach(a => { if (a.dataset.view === v) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
+    root.hidden = v !== 'sleep';
+    analysis.hidden = v === 'sleep';
+    if (v === 'sleep') return;
+    if (views) { views.show(BREATH[v]); return; }
+    if (loading) return;
+    loading = true;
+    Promise.all([
+      fetch(APNEA_URL).then(r => { if (!r.ok) throw new Error('apnea.json HTTP ' + r.status); return r.json(); }),
+      fetch(DATA_URL).then(r => r.json()),
+      new Promise((ok, bad) => { const sc = document.createElement('script'); sc.src = './breathing.js'; sc.onload = ok; sc.onerror = () => bad(new Error('breathing.js')); document.head.appendChild(sc); })
+    ]).then(([a, n]) => { views = window.BreathingViews.mount(analysis, a, n); route(); })
+      .catch(e => { analysis.innerHTML = '<div id="boot">Could not load breathing data: ' + String(e.message || e) + '. Run scripts/build_apnea.py.</div>'; })
+      .finally(() => { loading = false; });
+  }
+  addEventListener('hashchange', route);
+  let rt; addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { if (views && current !== 'sleep') views.redraw(BREATH[current]); }, 150); });
+  route();
+
+  fetch(ARTBOARD)
+    .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+    .then(boot)
+    .catch(e => { root.innerHTML = '<div id="boot">Could not load the dashboard: ' + String(e.message || e) + '. Serve this folder over HTTP (see README).</div>'; });
+})();
+</script>
+</body>
+</html>

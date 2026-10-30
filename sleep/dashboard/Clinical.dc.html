@@ -1,0 +1,1065 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sleep dashboard – Clinical</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F1F2F4}
+a{color:#2459C6}a:hover{color:#1A3F8F}
+button:focus-visible,select:focus-visible{outline:2px solid #2459C6;outline-offset:2px}
+</style>
+</helmet>
+<div style="box-sizing: border-box; background: #F1F2F4; color: #111418; font-family: 'IBM Plex Sans', system-ui, sans-serif; padding: 28px 24px 48px">
+<div style="max-width: 1440px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px">
+
+<header style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px; padding-bottom: 18px; border-bottom: 2px solid #111418">
+  <div>
+    <div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 500; letter-spacing: 0.06em; color: #5A6170">SLEEP REPORT · APPLE HEALTH EXPORT · {{coverage}}</div>
+    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; margin-top: 6px">
+      <h1 style="margin: 0; font-size: 30px; font-weight: 600; letter-spacing: -0.01em">{{title}}</h1>
+      <div style="display: flex; align-items: center; gap: 8px">
+        <label for="period" style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #5A6170">PERIOD</label>
+        <select id="period" value="{{periodVal}}" onChange="{{pickPeriod}}" style="min-height: 40px; border: 1px solid #B4BAC4; border-radius: 4px; padding: 0 10px; font: inherit; font-size: 13px; background: #FFFFFF; color: #111418">
+          <sc-for list="{{periods}}" as="p" hint-placeholder-count="6">
+            <option value="{{p.v}}">{{p.l}}</option>
+          </sc-for>
+        </select>
+        <button type="button" aria-label="Earlier period" onClick="{{per.earlier}}" disabled="{{per.earlierDis}}" style="width: 40px; min-height: 40px; border: 1px solid #D9DCE1; border-radius: 4px; background: #FFFFFF; color: #111418; font: inherit; cursor: pointer; opacity: {{per.earlierOp}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg></button>
+        <button type="button" aria-label="Later period" onClick="{{per.later}}" disabled="{{per.laterDis}}" style="width: 40px; min-height: 40px; border: 1px solid #D9DCE1; border-radius: 4px; background: #FFFFFF; color: #111418; font: inherit; cursor: pointer; opacity: {{per.laterOp}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"></path></svg></button>
+      </div>
+    </div>
+  </div>
+  <div style="display: flex; flex-wrap: wrap; align-items: stretch; gap: 10px">
+    <sc-for list="{{flags}}" as="f" hint-placeholder-count="3">
+      <div style="display: flex; align-items: center; gap: 10px; background: #FFFFFF; border: 1px solid #D9DCE1; border-radius: 4px; padding: 8px 12px">
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 22px; font-weight: 600; color: {{f.c}}">{{f.n}}</span>
+        <span style="font-size: 12px; line-height: 1.3; color: #3D4350; max-width: 120px">{{f.l}}</span>
+      </div>
+    </sc-for>
+    <button type="button" style="display: flex; align-items: center; gap: 8px; border: 1px solid #111418; border-radius: 4px; min-height: 48px; padding: 0 16px; font: inherit; font-size: 14px; font-weight: 600; background: #111418; color: #FFFFFF; cursor: pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"></path><path d="M7 8l5-5 5 5"></path><path d="M5 15v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4"></path></svg>Import export.xml</button>
+  </div>
+</header>
+
+<sc-if value="{{notReady}}" hint-placeholder-val="{{ false }}">
+  <div style="background: #FFFFFF; border: 1px solid #D9DCE1; border-radius: 4px; padding: 40px 22px; font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: #5A6170">{{loadMsg}}</div>
+</sc-if>
+
+<sc-if value="{{ready}}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start">
+
+<main style="flex: 999 1 720px; min-width: 0; display: flex; flex-direction: column; gap: 20px">
+
+  <section style="background: #FFFFFF; border: 1px solid #D9DCE1; border-radius: 4px; padding: 20px 22px">
+    <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px">
+      <div>
+        <h2 style="margin: 0; font-size: 16px; font-weight: 600">Nightly timeline</h2>
+        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #5A6170; margin-top: 2px">{{rangeLabel}}</div>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px">
+        <div role="group" aria-label="Window" style="display: flex; border: 1px solid #111418; border-radius: 4px; overflow: hidden">
+          <sc-for list="{{winBtns}}" as="w" hint-placeholder-count="4">
+            <button type="button" aria-pressed="{{w.pressed}}" onClick="{{w.pick}}" style="border: 0; min-height: 40px; padding: 0 14px; font: inherit; font-size: 13px; font-weight: 600; background: {{w.bg}}; color: {{w.fg}}; cursor: pointer">{{w.l}}</button>
+          </sc-for>
+        </div>
+        <button type="button" aria-label="Earlier" onClick="{{nav.earlier}}" disabled="{{nav.earlierDis}}" style="width: 40px; min-height: 40px; border: 1px solid #D9DCE1; border-radius: 4px; background: #FFFFFF; color: #111418; font: inherit; cursor: pointer; opacity: {{nav.earlierOp}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg></button>
+        <button type="button" aria-label="Later" onClick="{{nav.later}}" disabled="{{nav.laterDis}}" style="width: 40px; min-height: 40px; border: 1px solid #D9DCE1; border-radius: 4px; background: #FFFFFF; color: #111418; font: inherit; cursor: pointer; opacity: {{nav.laterOp}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"></path></svg></button>
+      </div>
+    </div>
+    <div style="display: flex; flex-wrap: wrap; gap: 8px 14px; font-size: 12px; color: #3D4350; margin: 12px 0 14px">
+      <sc-for list="{{legend}}" as="l" hint-placeholder-count="5">
+        <div style="display: flex; align-items: center; gap: 6px"><span style="width: 12px; height: 12px; background: {{l.c}}"></span>{{l.l}}</div>
+      </sc-for>
+    </div>
+    <div style="overflow-x: auto">
+      <div style="min-width: {{minW}}; padding: 6px 0 4px; display: flex; flex-direction: column; gap: 6px">
+
+        <sc-if value="{{showStrips}}" hint-placeholder-val="{{ true }}">
+          <div style="display: flex; gap: 8px; height: 20px">
+            <div style="width: 72px; flex: none; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #5A6170; text-align: right; line-height: 20px">Efficiency</div>
+            <div style="flex: 1 1 auto; min-width: 0; display: flex">
+              <sc-for list="{{vis}}" as="n" hint-placeholder-count="30">
+                <div title="{{n.effTip}}" style="flex: 1 1 0; min-width: 0; margin: 0 1px; background: {{n.effBg}}"></div>
+              </sc-for>
+            </div>
+          </div>
+          <div style="display: flex; gap: 8px; height: 14px">
+            <div style="width: 72px; flex: none; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #5A6170; text-align: right; line-height: 14px">SpO₂ &lt;89%</div>
+            <div style="flex: 1 1 auto; min-width: 0; display: flex">
+              <sc-for list="{{vis}}" as="n" hint-placeholder-count="30">
+                <div title="{{n.spoTip}}" style="flex: 1 1 0; min-width: 0; display: flex; align-items: center; justify-content: center">
+                  <span style="width: {{n.dot}}; height: {{n.dot}}; border-radius: 50%; background: {{n.dotC}}"></span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+
+        <div style="display: flex; gap: 8px; margin-top: 4px">
+          <div style="position: relative; width: 72px; height: {{plotH}}px; flex: none">
+            <sc-for list="{{hours}}" as="h" hint-placeholder-count="15">
+              <span style="position: absolute; right: 0; top: {{h.top}}%; transform: translateY(-50%); font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: {{h.fw}}; color: #5A6170; white-space: nowrap">{{h.label}}</span>
+            </sc-for>
+          </div>
+          <div onMouseLeave="{{clear}}" style="position: relative; flex: 1 1 auto; min-width: 0; height: {{plotH}}px">
+            <sc-for list="{{hours}}" as="h" hint-placeholder-count="15">
+              <div style="position: absolute; left: 0; right: 0; top: {{h.top}}%; border-top: 1px solid {{h.line}}"></div>
+            </sc-for>
+            <div style="position: absolute; top: 0; left: 0; bottom: 0; right: {{colRight}}; display: flex">
+              <sc-for list="{{vis}}" as="n" hint-placeholder-count="30">
+                <div style="flex: 1 1 0; min-width: 0; height: 100%; position: relative; background: {{n.colBg}}">
+                  <div style="position: absolute; top: 0; bottom: 0; left: 50%; transform: translateX(-50%); width: 76%; max-width: {{barMax}}">
+                    <sc-for list="{{n.segs}}" as="s" hint-placeholder-count="12">
+                      <div onMouseEnter="{{s.enter}}" style="position: absolute; left: 0; right: 0; top: {{s.top}}%; height: {{s.h}}%; background: {{s.bg}}; box-shadow: {{s.ring}}; cursor: default"></div>
+                    </sc-for>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+            <sc-if value="{{single}}" hint-placeholder-val="{{ false }}">
+              <div style="position: absolute; top: 0; bottom: 0; left: 54%; right: 0; z-index: 2; background: #FFFFFF; border-left: 1px solid #E4E6EA; padding: 4px 0 0 24px; display: flex; flex-direction: column; gap: 18px; overflow: hidden">
+                <div>
+                  <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #5A6170">{{det.sub}}</div>
+                  <div style="font-size: 22px; font-weight: 600; margin-top: 2px">{{det.date}}</div>
+                </div>
+                <div style="display: flex; flex-wrap: wrap; gap: 28px">
+                  <div><div style="font-size: 11px; color: #5A6170">Asleep</div><div style="font-family: 'IBM Plex Mono', monospace; font-size: 26px; font-weight: 600">{{det.total}}</div></div>
+                  <div><div style="font-size: 11px; color: #5A6170">Efficiency</div><div style="font-family: 'IBM Plex Mono', monospace; font-size: 26px; font-weight: 600">{{det.eff}}</div></div>
+                  <div><div style="font-size: 11px; color: #5A6170">Wake-ups</div><div style="font-family: 'IBM Plex Mono', monospace; font-size: 26px; font-weight: 600">{{det.wakeups}}</div></div>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; padding-top: 14px; border-top: 1px solid #E4E6EA">
+                  <sc-for list="{{det.times}}" as="t" hint-placeholder-count="4">
+                    <div><div style="font-size: 11px; color: #5A6170">{{t.l}}</div><div style="font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-weight: 600; white-space: nowrap">{{t.v}}</div></div>
+                  </sc-for>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 10px; padding-top: 14px; border-top: 1px solid #E4E6EA">
+                  <sc-for list="{{det.stages}}" as="s" hint-placeholder-count="5">
+                    <div style="display: grid; grid-template-columns: 12px 110px minmax(0, 1fr) 64px 40px; align-items: center; gap: 10px; font-size: 13px">
+                      <span style="width: 12px; height: 12px; background: {{s.c}}"></span>
+                      <span>{{s.name}}</span>
+                      <div style="height: 6px; background: #EEF0F3"><div style="height: 6px; width: {{s.pct}}%; background: {{s.c}}"></div></div>
+                      <span style="font-family: 'IBM Plex Mono', monospace; text-align: right; font-weight: 600">{{s.v}}</span>
+                      <span style="font-family: 'IBM Plex Mono', monospace; text-align: right; color: #5A6170">{{s.pct}}%</span>
+                    </div>
+                  </sc-for>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding-top: 14px; border-top: 1px solid #E4E6EA">
+                  <sc-for list="{{det.vitals}}" as="t" hint-placeholder-count="3">
+                    <div><div style="font-size: 11px; color: #5A6170">{{t.l}}</div><div style="font-family: 'IBM Plex Mono', monospace; font-size: 15px; font-weight: 600">{{t.v}}</div></div>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{tip.show}}" hint-placeholder-val="{{ false }}">
+              <div style="position: absolute; left: {{tip.left}}%; top: {{tip.top}}%; transform: {{tip.tf}}; z-index: 5; pointer-events: none; width: 248px; box-sizing: border-box; background: #FFFFFF; color: #111418; border: 1px solid #111418; border-radius: 4px; padding: 12px 14px; box-shadow: 4px 4px 0 rgba(17,20,24,0.12); font-size: 12px; line-height: 1.45">
+                <div style="display: flex; justify-content: space-between; gap: 8px"><span style="font-weight: 600; font-size: 13px">{{tip.date}}</span><span style="font-family: 'IBM Plex Mono', monospace; color: #5A6170">{{tip.eff}}</span></div>
+                <div style="color: #5A6170">{{tip.sub}}</div>
+                <div style="display: flex; align-items: center; gap: 8px; margin-top: 10px; padding-top: 8px; border-top: 1px solid #E4E6EA">
+                  <span style="width: 10px; height: 10px; flex: none; background: {{tip.sw}}"></span>
+                  <span style="font-weight: 600">{{tip.name}}</span>
+                  <span style="margin-left: auto; font-family: 'IBM Plex Mono', monospace; font-weight: 600">{{tip.len}}</span>
+                </div>
+                <div style="font-family: 'IBM Plex Mono', monospace; color: #3D4350; margin-top: 2px">{{tip.range}}</div>
+                <sc-if value="{{tip.hasNote}}" hint-placeholder-val="{{ false }}">
+                  <div style="color: #3D4350; margin-top: 2px">{{tip.note}}</div>
+                </sc-if>
+                <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-top: 10px; padding-top: 8px; border-top: 1px solid #E4E6EA; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #3D4350">
+                  <span>{{tip.asleep}}</span><span>SpO₂↓ {{tip.spo}}</span><span>HR {{tip.hr}}</span>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+        </div>
+
+        <sc-if value="{{showStrips}}" hint-placeholder-val="{{ true }}">
+          <div style="display: flex; gap: 8px; height: 56px; margin-top: 6px">
+            <div style="width: 72px; flex: none; display: flex; flex-direction: column; justify-content: space-between; align-items: flex-end; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #5A6170"><span>Awake 60m</span><span>0</span></div>
+            <div style="flex: 1 1 auto; min-width: 0; display: flex; border-bottom: 1px solid #B4BAC4; background: repeating-linear-gradient(180deg, transparent 0px, transparent 27px, #EEF0F3 27px, #EEF0F3 28px)">
+              <sc-for list="{{vis}}" as="n" hint-placeholder-count="30">
+                <div title="{{n.awTip}}" style="flex: 1 1 0; min-width: 0; position: relative">
+                  <div style="position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 64%; max-width: {{barMax}}; height: {{n.awH}}%; background: #EC8546"></div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+          <div style="display: flex; gap: 8px">
+            <div style="width: 72px; flex: none"></div>
+            <div style="flex: 1 1 auto; min-width: 0; display: flex; height: 16px">
+              <sc-for list="{{xlabels}}" as="x" hint-placeholder-count="30">
+                <div style="flex: 1 1 0; min-width: 0; position: relative">
+                  <span style="position: absolute; left: 50%; top: 0; transform: translateX(-50%); font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #5A6170; white-space: nowrap">{{x.t}}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+
+      </div>
+    </div>
+  </section>
+
+  <section style="background: #FFFFFF; border: 1px solid #D9DCE1; border-radius: 4px; padding: 20px 22px">
+    <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 12px">
+      <div>
+        <h2 style="margin: 0; font-size: 16px; font-weight: 600">Calendar</h2>
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin-top: 4px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #5A6170">
+          <span>{{goalsTxt}}</span>
+          <button type="button" title="Goals are set in the Tweaks panel for this mockup" style="border: 0; background: none; padding: 0; min-height: 24px; font: inherit; font-size: 12px; color: #2459C6; text-decoration: underline; cursor: pointer">Edit goals</button>
+          <span>· Click a day to open that night</span>
+        </div>
+      </div>
+      <sc-if value="{{isAll}}" hint-placeholder-val="{{ true }}">
+        <div role="group" aria-label="Ring style" style="display: flex; flex-wrap: wrap; border: 1px solid #D9DCE1; border-radius: 4px; overflow: hidden">
+          <sc-for list="{{ringBtns}}" as="r" hint-placeholder-count="3">
+            <button type="button" aria-pressed="{{r.pressed}}" onClick="{{r.pick}}" style="border: 0; min-height: 40px; padding: 0 12px; font: inherit; font-size: 12.5px; font-weight: 600; background: {{r.bg}}; color: {{r.fg}}; cursor: pointer">{{r.l}}</button>
+          </sc-for>
+        </div>
+      </sc-if>
+    </div>
+    <div role="group" aria-label="Calendar view" style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px">
+      <sc-for list="{{tabs}}" as="t" hint-placeholder-count="7">
+        <button type="button" aria-pressed="{{t.pressed}}" onClick="{{t.pick}}" style="border: 1px solid #111418; border-radius: 4px; min-height: 40px; padding: 0 14px; font: inherit; font-size: 13px; font-weight: 600; background: {{t.bg}}; color: {{t.fg}}; cursor: pointer">{{t.l}}</button>
+      </sc-for>
+    </div>
+
+    <div style="display: flex; flex-wrap: wrap; gap: 28px 24px">
+      <sc-for list="{{months}}" as="m" hint-placeholder-count="2">
+        <div style="flex: 1 1 360px; min-width: 0">
+          <div style="font-size: 14px; font-weight: 600; margin-bottom: 8px">{{m.name}}</div>
+          <div style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px">
+            <sc-for list="{{wk}}" as="w" hint-placeholder-count="7">
+              <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #5A6170; text-align: center; padding-bottom: 4px">{{w.d}}</div>
+            </sc-for>
+            <sc-for list="{{m.cells}}" as="c" hint-placeholder-count="35">
+              <sc-if value="{{c.blank}}" hint-placeholder-val="{{ false }}"><div></div></sc-if>
+              <sc-if value="{{c.isFuture}}" hint-placeholder-val="{{ false }}">
+                <div title="{{c.tip}}" style="height: {{cellH}}px; box-sizing: border-box; border: 1px dashed #B4BAC4; border-radius: 3px; padding: 5px 6px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #5A6170">{{c.day}}</div>
+              </sc-if>
+              <sc-if value="{{c.isDay}}" hint-placeholder-val="{{ true }}">
+                <button type="button" title="{{c.tip}}" aria-label="{{c.aria}}" aria-pressed="{{c.pressed}}" onClick="{{c.pick}}" style="height: {{cellH}}px; width: 100%; min-width: 0; box-sizing: border-box; margin: 0; padding: 5px 5px 6px; border: {{c.bd}}; border-radius: 3px; background: {{c.bg}}; color: #111418; font: inherit; text-align: left; cursor: pointer; display: flex; flex-direction: column; align-items: stretch; gap: 3px; overflow: hidden">
+                  <span style="display: flex; justify-content: space-between; align-items: center">
+                    <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #3D4350">{{c.day}}</span>
+                    <span style="width: 7px; height: 7px; border-radius: 50%; background: {{c.flagC}}"></span>
+                  </span>
+
+                  <sc-if value="{{isSched}}" hint-placeholder-val="{{ false }}">
+                    <span style="display: flex; flex-direction: column; gap: 5px; margin-top: auto">
+                      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; white-space: nowrap">{{c.bedT}}</span>
+                      <span style="position: relative; display: block; height: 6px; background: #EEF0F3; border-radius: 3px">
+                        <span style="position: absolute; top: 0; bottom: 0; left: {{c.wl}}%; width: {{c.ww}}%; background: #C9CED6; border-radius: 3px"></span>
+                        <span style="position: absolute; top: 0; bottom: 0; left: {{c.sl}}%; width: {{c.sw}}%; background: #3C69D9; border-radius: 3px"></span>
+                      </span>
+                      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; white-space: nowrap">{{c.upT}}</span>
+                    </span>
+                  </sc-if>
+
+                  <sc-if value="{{isRing}}" hint-placeholder-val="{{ true }}">
+                    <span style="display: grid; place-items: center; align-self: center; width: {{ringPx}}px; max-width: 100%">
+                      <sc-if value="{{kind3}}" hint-placeholder-val="{{ true }}">
+                        <svg viewBox="0 0 48 48" aria-hidden="true" style="grid-area: 1 / 1; width: 100%; height: auto; aspect-ratio: 1 / 1">
+                          <circle cx="24" cy="24" r="20" fill="none" stroke="#D5EEEA" stroke-width="4.5"></circle>
+                          <circle cx="24" cy="24" r="20" fill="none" stroke="#2E9C8A" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="{{c.r1}}" transform="rotate(-90 24 24)"></circle>
+                          <circle cx="24" cy="24" r="14.5" fill="none" stroke="#E1DEF8" stroke-width="4.5"></circle>
+                          <circle cx="24" cy="24" r="14.5" fill="none" stroke="#3F33A8" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="{{c.r2}}" transform="rotate(-90 24 24)"></circle>
+                          <circle cx="24" cy="24" r="9" fill="none" stroke="#D8EAF7" stroke-width="4.5"></circle>
+                          <circle cx="24" cy="24" r="9" fill="none" stroke="#2E86C9" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="{{c.r3}}" transform="rotate(-90 24 24)"></circle>
+                        </svg>
+                      </sc-if>
+                      <sc-if value="{{kindShare}}" hint-placeholder-val="{{ false }}">
+                        <svg viewBox="0 0 48 48" aria-hidden="true" style="grid-area: 1 / 1; width: 100%; height: auto; aspect-ratio: 1 / 1">
+                          <circle cx="24" cy="24" r="18" fill="none" stroke="#EEF0F3" stroke-width="7"></circle>
+                          <circle cx="24" cy="24" r="18" fill="none" stroke="{{c.s0.c}}" stroke-width="7" stroke-dasharray="{{c.s0.da}}" stroke-dashoffset="{{c.s0.off}}" transform="rotate(-90 24 24)"></circle>
+                          <circle cx="24" cy="24" r="18" fill="none" stroke="{{c.s1.c}}" stroke-width="7" stroke-dasharray="{{c.s1.da}}" stroke-dashoffset="{{c.s1.off}}" transform="rotate(-90 24 24)"></circle>
+                          <circle cx="24" cy="24" r="18" fill="none" stroke="{{c.s2.c}}" stroke-width="7" stroke-dasharray="{{c.s2.da}}" stroke-dashoffset="{{c.s2.off}}" transform="rotate(-90 24 24)"></circle>
+                          <circle cx="24" cy="24" r="18" fill="none" stroke="{{c.s3.c}}" stroke-width="7" stroke-dasharray="{{c.s3.da}}" stroke-dashoffset="{{c.s3.off}}" transform="rotate(-90 24 24)"></circle>
+                          <circle cx="24" cy="24" r="18" fill="none" stroke="{{c.s4.c}}" stroke-width="7" stroke-dasharray="{{c.s4.da}}" stroke-dashoffset="{{c.s4.off}}" transform="rotate(-90 24 24)"></circle>
+                        </svg>
+                      </sc-if>
+                      <sc-if value="{{kindOne}}" hint-placeholder-val="{{ false }}">
+                        <svg viewBox="0 0 48 48" aria-hidden="true" style="grid-area: 1 / 1; width: 100%; height: auto; aspect-ratio: 1 / 1">
+                          <circle cx="24" cy="24" r="18" fill="none" stroke="{{c.ringT}}" stroke-width="6"></circle>
+                          <circle cx="24" cy="24" r="18" fill="none" stroke="{{c.ringC}}" stroke-width="6" stroke-linecap="round" stroke-dasharray="{{c.ringDa}}" transform="rotate(-90 24 24)"></circle>
+                        </svg>
+                      </sc-if>
+                      <span style="grid-area: 1 / 1; font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: -0.03em; color: #111418">{{c.center}}</span>
+                    </span>
+                    <sc-if value="{{kind3}}" hint-placeholder-val="{{ true }}">
+                      <span style="display: flex; justify-content: center; gap: 3px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: -0.03em; white-space: nowrap">
+                        <span style="color: #1F7466">{{c.p1}}</span><span style="color: #3F33A8">{{c.p2}}</span><span style="color: #1F6FAE">{{c.p3}}</span>
+                      </span>
+                    </sc-if>
+                    <sc-if value="{{notKind3}}" hint-placeholder-val="{{ false }}">
+                      <span style="text-align: center; font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600; white-space: nowrap">{{c.l1}}</span>
+                    </sc-if>
+                    <span style="text-align: center; font-size: 10px; color: #5A6170; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{c.l2}}</span>
+                  </sc-if>
+                </button>
+              </sc-if>
+            </sc-for>
+          </div>
+
+          <div style="display: flex; gap: 12px; margin-top: 16px; padding-top: 14px; border-top: 1px solid #E4E6EA">
+            <sc-for list="{{m.minis}}" as="mi" hint-placeholder-count="3">
+              <div style="flex: 1 1 0; min-width: 0">
+                <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 2px 6px; margin-bottom: 6px">
+                  <span style="font-size: 12px; font-weight: 600">{{mi.title}}</span>
+                  <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; color: #5A6170; white-space: nowrap">{{mi.avg}}</span>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px">
+                  <sc-for list="{{mi.cells}}" as="c" hint-placeholder-count="35">
+                    <sc-if value="{{c.blank}}" hint-placeholder-val="{{ false }}"><div></div></sc-if>
+                    <sc-if value="{{c.isFuture}}" hint-placeholder-val="{{ false }}"><div title="{{c.tip}}" style="height: 14px; box-sizing: border-box; border-radius: 2px; border: 1px dashed #C9CED6"></div></sc-if>
+                    <sc-if value="{{c.isDay}}" hint-placeholder-val="{{ true }}"><div title="{{c.tip}}" style="height: 14px; border-radius: 2px; background: {{c.bg}}; box-shadow: {{c.ring}}"></div></sc-if>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; margin-top: 18px; padding-top: 14px; border-top: 1px solid #E4E6EA; font-size: 12px; color: #3D4350">
+      <sc-for list="{{calLegend}}" as="l" hint-placeholder-count="3">
+        <span style="display: flex; align-items: center; gap: 6px"><span style="width: 12px; height: 12px; border-radius: 50%; background: {{l.c}}"></span>{{l.l}}</span>
+      </sc-for>
+      <span style="color: #5A6170">{{legendNote}}</span>
+      <span style="display: flex; align-items: center; gap: 6px"><span style="width: 7px; height: 7px; border-radius: 50%; background: #B45314"></span>Lowest SpO₂ under 89%</span>
+    </div>
+    <div style="display: flex; flex-wrap: wrap; gap: 8px 24px; margin-top: 10px; font-size: 11.5px; color: #3D4350">
+      <sc-for list="{{miniLegend}}" as="g" hint-placeholder-count="3">
+        <span style="display: flex; align-items: center; gap: 4px">
+          <span style="font-weight: 600; margin-right: 4px">{{g.title}}</span>
+          <span style="color: #5A6170; margin-right: 2px">{{g.lo}}</span>
+          <sc-for list="{{g.sw}}" as="s" hint-placeholder-count="5"><span title="{{s.l}}" style="width: 14px; height: 10px; border-radius: 2px; background: {{s.c}}"></span></sc-for>
+          <span style="color: #5A6170; margin-left: 2px">{{g.hi}}</span>
+        </span>
+      </sc-for>
+    </div>
+  </section>
+
+</main>
+
+<aside style="flex: {{asideFlex}}; min-width: 0">
+  <sc-if value="{{sumOpen}}" hint-placeholder-val="{{ true }}">
+    <section style="background: #FFFFFF; border: 1px solid #D9DCE1; border-radius: 4px; padding: 20px 22px">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px">
+        <div>
+          <h2 style="margin: 0; font-size: 16px; font-weight: 600">Summary · nightly averages</h2>
+          <p style="margin: 4px 0 6px; font-size: 12px; color: #5A6170">Trend column shows weekly averages across both months, latest in black.</p>
+        </div>
+        <button type="button" aria-label="Collapse summary" title="Collapse summary" onClick="{{toggleSum}}" style="flex: none; width: 40px; height: 40px; border: 1px solid #D9DCE1; border-radius: 4px; background: #FFFFFF; color: #111418; cursor: pointer; display: flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 17l5-5-5-5"></path><path d="M6 17l5-5-5-5"></path></svg></button>
+      </div>
+      <div style="display: grid; grid-template-columns: minmax(0, 1.3fr) repeat(3, minmax(0, 0.9fr)) 64px; column-gap: 10px; align-items: center; font-size: 12.5px">
+        <div style="padding: 10px 0 6px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #5A6170">METRIC</div>
+        <div style="padding: 10px 0 6px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #5A6170; text-align: right">{{colA}}</div>
+        <div style="padding: 10px 0 6px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #5A6170; text-align: right">{{colB}}</div>
+        <div style="padding: 10px 0 6px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #5A6170; text-align: right">Δ</div>
+        <div style="padding: 10px 0 6px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #5A6170; text-align: right">TREND</div>
+        <sc-for list="{{table}}" as="g" hint-placeholder-count="4">
+          <div style="grid-column: 1 / -1; padding: 14px 0 6px; border-bottom: 1px solid #111418; font-size: 12px; font-weight: 700">{{g.name}}</div>
+          <sc-for list="{{g.rows}}" as="r" hint-placeholder-count="4">
+            <div style="padding: 8px 0; border-bottom: 1px solid #E4E6EA; color: #3D4350">{{r.k}}</div>
+            <div style="padding: 8px 0; border-bottom: 1px solid #E4E6EA; text-align: right; white-space: nowrap; font-family: 'IBM Plex Mono', monospace; color: #3D4350">{{r.sep}}</div>
+            <div style="padding: 8px 0; border-bottom: 1px solid #E4E6EA; text-align: right; white-space: nowrap; font-family: 'IBM Plex Mono', monospace; font-weight: 600">{{r.oct}}</div>
+            <div style="padding: 8px 0; border-bottom: 1px solid #E4E6EA; text-align: right; white-space: nowrap; font-family: 'IBM Plex Mono', monospace; font-weight: 600; color: {{r.dc}}">{{r.d}}</div>
+            <div style="padding: 8px 0; border-bottom: 1px solid #E4E6EA; height: 34px; box-sizing: border-box; display: flex; align-items: flex-end; gap: 2px">
+              <sc-for list="{{r.weeks}}" as="w" hint-placeholder-count="9"><span style="flex: 1 1 0; height: {{w.h}}%; background: {{w.c}}"></span></sc-for>
+            </div>
+          </sc-for>
+        </sc-for>
+      </div>
+      <p style="margin: 14px 0 0; font-size: 12px; line-height: 1.5; color: #5A6170">{{deltaNote}} Blue is better, orange is worse, grey has no good direction.</p>
+    </section>
+  </sc-if>
+  <sc-if value="{{sumClosed}}" hint-placeholder-val="{{ false }}">
+    <button type="button" aria-label="Show summary" title="Show summary" onClick="{{toggleSum}}" style="width: 52px; min-height: 240px; box-sizing: border-box; border: 1px solid #D9DCE1; border-radius: 4px; background: #FFFFFF; color: #111418; font: inherit; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 12px 0">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 17l-5-5 5-5"></path><path d="M18 17l-5-5 5-5"></path></svg>
+      <span style="writing-mode: vertical-rl; transform: rotate(180deg); font-size: 13px; font-weight: 600; letter-spacing: 0.02em">{{sumLabel}}</span>
+    </button>
+  </sc-if>
+</aside>
+
+</div>
+
+<section style="background: #FFFFFF; border: 1px solid #D9DCE1; border-radius: 4px; padding: 20px 22px">
+  <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 12px; padding-bottom: 14px; border-bottom: 1px solid #E4E6EA">
+    <div>
+      <div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; color: #2459C6">{{nv.eyebrow}}</div>
+      <h2 style="margin: 4px 0 0; font-size: 24px; font-weight: 600; letter-spacing: -0.01em">{{nv.date}}</h2>
+      <div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #5A6170; margin-top: 2px">{{nv.sub}}</div>
+    </div>
+    <div style="display: flex; flex-wrap: wrap; gap: 8px">
+      <button type="button" onClick="{{nv.prev}}" disabled="{{nv.prevDis}}" style="display: flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 14px 0 10px; border: 1px solid #D9DCE1; border-radius: 4px; background: #FFFFFF; color: #111418; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; opacity: {{nv.prevOp}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg>Previous night</button>
+      <button type="button" onClick="{{nv.next}}" disabled="{{nv.nextDis}}" style="display: flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 10px 0 14px; border: 1px solid #D9DCE1; border-radius: 4px; background: #FFFFFF; color: #111418; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; opacity: {{nv.nextOp}}">Next night<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"></path></svg></button>
+      <sc-if value="{{nv.notLast}}" hint-placeholder-val="{{ false }}">
+        <button type="button" onClick="{{nv.last}}" style="min-height: 40px; padding: 0 14px; border: 1px solid #111418; border-radius: 4px; background: #111418; color: #FFFFFF; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer">Back to last night</button>
+      </sc-if>
+    </div>
+  </div>
+
+  <div style="display: flex; flex-wrap: wrap; gap: 28px 36px; margin-top: 18px">
+    <div style="flex: 999 1 600px; min-width: 0">
+      <div style="font-size: 13px; font-weight: 600; margin-bottom: 10px">{{nv.head}}</div>
+      <div style="overflow-x: auto">
+        <div style="min-width: 520px">
+          <div style="display: flex; gap: 10px">
+            <div style="width: 52px; flex: none; display: flex; flex-direction: column">
+              <sc-for list="{{lanes}}" as="ln" hint-placeholder-count="4">
+                <span style="height: 36px; display: flex; align-items: center; justify-content: flex-end; font-size: 12px; color: #3D4350">{{ln.l}}</span>
+              </sc-for>
+            </div>
+            <div style="position: relative; flex: 1 1 auto; min-width: 0; height: 144px; background: repeating-linear-gradient(180deg, #F7F8FA 0px, #F7F8FA 35px, #E4E6EA 35px, #E4E6EA 36px)">
+              <sc-for list="{{nv.ticks}}" as="t" hint-placeholder-count="9">
+                <div style="position: absolute; top: 0; bottom: 0; left: {{t.l}}%; border-left: 1px solid #E4E6EA"></div>
+              </sc-for>
+              <sc-for list="{{nv.hyp}}" as="s" hint-placeholder-count="14">
+                <div title="{{s.tip}}" style="position: absolute; left: {{s.l}}%; width: {{s.w}}%; top: {{s.top}}px; height: 28px; background: {{s.bg}}; border-radius: 2px"></div>
+              </sc-for>
+            </div>
+          </div>
+          <sc-if value="{{nv.hasCpap}}" hint-placeholder-val="{{ false }}">
+            <div style="display: flex; gap: 10px; margin-top: 8px">
+              <div style="width: 52px; flex: none; display: flex; flex-direction: column">
+                <span style="height: 22px; display: flex; align-items: center; justify-content: flex-end; font-size: 12px; color: #3D4350">Mask</span>
+                <span style="height: 36px; display: flex; align-items: center; justify-content: flex-end; font-size: 12px; color: #3D4350">Events</span>
+              </div>
+              <div style="position: relative; flex: 1 1 auto; min-width: 0; height: 58px">
+                <sc-for list="{{nv.ticks}}" as="t" hint-placeholder-count="9">
+                  <div style="position: absolute; top: 0; bottom: 0; left: {{t.l}}%; border-left: 1px solid #E4E6EA"></div>
+                </sc-for>
+                <div style="position: absolute; left: 0; right: 0; top: 4px; height: 14px; background: #EEF0F3; border-radius: 2px"></div>
+                <sc-for list="{{nv.mask}}" as="m" hint-placeholder-count="2">
+                  <div title="{{m.tip}}" style="position: absolute; top: 4px; height: 14px; left: {{m.l}}%; width: {{m.w}}%; background: #0F172A; border-radius: 2px"></div>
+                </sc-for>
+                <sc-for list="{{nv.events}}" as="e" hint-placeholder-count="12">
+                  <div title="{{e.tip}}" style="position: absolute; top: {{e.top}}px; left: {{e.l}}%; width: 3px; height: 10px; margin-left: -1.5px; background: {{e.c}}; border-radius: 1px"></div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+          <sc-if value="{{nv.hasRing}}" hint-placeholder-val="{{ false }}">
+            <div style="display: flex; gap: 10px; margin-top: 8px">
+              <div style="position: relative; width: 52px; flex: none; height: 110px">
+                <span style="position: absolute; right: 0; top: 0; font-size: 12px; color: #3D4350">SpO₂</span>
+                <sc-for list="{{nv.spoTicks}}" as="t" hint-placeholder-count="2">
+                  <span style="position: absolute; right: 0; top: {{t.top}}%; transform: translateY(-50%); font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #5A6170">{{t.t}}</span>
+                </sc-for>
+              </div>
+              <div style="position: relative; flex: 1 1 auto; min-width: 0; height: 110px; background: #F7F8FA">
+                <sc-for list="{{nv.ticks}}" as="t" hint-placeholder-count="9">
+                  <div style="position: absolute; top: 0; bottom: 0; left: {{t.l}}%; border-left: 1px solid #E4E6EA"></div>
+                </sc-for>
+                <svg viewBox="0 0 1000 100" preserveAspectRatio="none" aria-hidden="true" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%">
+                  <line x1="0" x2="1000" y1="{{nv.y95}}" y2="{{nv.y95}}" stroke="#E4E6EA" stroke-width="1" vector-effect="non-scaling-stroke"></line>
+                  <line x1="0" x2="1000" y1="{{nv.y90}}" y2="{{nv.y90}}" stroke="#B4BAC4" stroke-width="1" stroke-dasharray="4 3" vector-effect="non-scaling-stroke"></line>
+                  <path d="{{nv.spoArea}}" fill="#C9CED6" opacity="0.7"></path>
+                  <path d="{{nv.spoLine}}" fill="none" stroke="#111418" stroke-width="1.5" stroke-linejoin="round" vector-effect="non-scaling-stroke"></path>
+                  <sc-if value="{{nv.hasWatch}}" hint-placeholder-val="{{ false }}">
+                    <line x1="{{nv.watchX1}}" x2="{{nv.watchX2}}" y1="{{nv.watchY}}" y2="{{nv.watchY}}" stroke="#3C69D9" stroke-width="2" stroke-dasharray="6 4" vector-effect="non-scaling-stroke"></line>
+                  </sc-if>
+                </svg>
+              </div>
+            </div>
+          </sc-if>
+          <div style="display: flex; gap: 10px; margin-top: 6px">
+            <div style="width: 52px; flex: none"></div>
+            <div style="position: relative; flex: 1 1 auto; min-width: 0; height: 16px">
+              <sc-for list="{{nv.ticks}}" as="t" hint-placeholder-count="9">
+                <span style="position: absolute; left: {{t.l}}%; top: 0; transform: translateX(-50%); font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #5A6170; white-space: nowrap">{{t.t}}</span>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </div>
+      <sc-if value="{{nv.hasBreathing}}" hint-placeholder-val="{{ false }}">
+        <div style="display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 10px; font-size: 12px; color: #3D4350">
+          <span style="display: flex; align-items: center; gap: 6px"><span style="width: 12px; height: 12px; border-radius: 2px; background: #0F172A"></span>Mask on (ResMed)</span>
+          <span style="display: flex; align-items: center; gap: 6px"><span style="width: 3px; height: 12px; background: #C2410C"></span>Central apnea</span>
+          <span style="display: flex; align-items: center; gap: 6px"><span style="width: 3px; height: 12px; background: #0D9488"></span>Obstructive apnea</span>
+          <span style="display: flex; align-items: center; gap: 6px"><span style="width: 3px; height: 12px; background: #8B5CF6"></span>Other / hypopnea</span>
+          <span style="display: flex; align-items: center; gap: 6px"><span style="width: 14px; height: 2px; background: #111418"></span>Ring SpO₂ (shaded: per-minute low)</span>
+          <span style="display: flex; align-items: center; gap: 6px"><span style="width: 14px; border-top: 2px dashed #3C69D9"></span>Watch SpO₂ average</span>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 12px; margin-top: 14px; padding-top: 14px; border-top: 1px solid #E4E6EA">
+          <sc-for list="{{nv.breath}}" as="t" hint-placeholder-count="6">
+            <div><div style="font-size: 11px; color: #5A6170">{{t.l}}</div><div style="font-family: 'IBM Plex Mono', monospace; font-size: 15px; font-weight: 600; white-space: nowrap; color: {{t.c}}">{{t.v}}</div><div style="font-size: 11px; color: #5A6170">{{t.note}}</div></div>
+          </sc-for>
+        </div>
+      </sc-if>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 12px; margin-top: 18px; padding-top: 14px; border-top: 1px solid #E4E6EA">
+        <sc-for list="{{nv.times}}" as="t" hint-placeholder-count="5">
+          <div><div style="font-size: 11px; color: #5A6170">{{t.l}}</div><div style="font-family: 'IBM Plex Mono', monospace; font-size: 15px; font-weight: 600; white-space: nowrap">{{t.v}}</div></div>
+        </sc-for>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 12px; margin-top: 14px; padding-top: 14px; border-top: 1px solid #E4E6EA">
+        <sc-for list="{{nv.stages}}" as="s" hint-placeholder-count="5">
+          <div style="display: flex; flex-direction: column; gap: 4px">
+            <span style="display: flex; align-items: center; gap: 6px; font-size: 11px; color: #3D4350"><span style="width: 10px; height: 10px; background: {{s.c}}"></span>{{s.name}}</span>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 15px; font-weight: 600; white-space: nowrap">{{s.v}} <span style="font-size: 11px; font-weight: 500; color: #5A6170">{{s.pct}}%</span></span>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <div style="flex: 1 1 340px; min-width: 0; display: flex; flex-direction: column; gap: 18px">
+      <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 18px">
+        <svg width="128" height="128" viewBox="0 0 48 48" role="img" aria-label="{{nv.ringAria}}" style="flex: none">
+          <circle cx="24" cy="24" r="20" fill="none" stroke="#D5EEEA" stroke-width="4.5"></circle>
+          <circle cx="24" cy="24" r="20" fill="none" stroke="#2E9C8A" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="{{nv.r1}}" transform="rotate(-90 24 24)"></circle>
+          <circle cx="24" cy="24" r="14.5" fill="none" stroke="#E1DEF8" stroke-width="4.5"></circle>
+          <circle cx="24" cy="24" r="14.5" fill="none" stroke="#3F33A8" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="{{nv.r2}}" transform="rotate(-90 24 24)"></circle>
+          <circle cx="24" cy="24" r="9" fill="none" stroke="#D8EAF7" stroke-width="4.5"></circle>
+          <circle cx="24" cy="24" r="9" fill="none" stroke="#2E86C9" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="{{nv.r3}}" transform="rotate(-90 24 24)"></circle>
+        </svg>
+        <div style="display: flex; flex-direction: column; gap: 12px; min-width: 0">
+          <sc-for list="{{nv.goals}}" as="g" hint-placeholder-count="3">
+            <div style="display: flex; align-items: flex-start; gap: 8px">
+              <span style="width: 10px; height: 10px; border-radius: 50%; margin-top: 4px; flex: none; background: {{g.c}}"></span>
+              <div style="display: flex; flex-direction: column">
+                <span style="font-size: 12px; color: #3D4350">{{g.l}}</span>
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 15px; font-weight: 600; white-space: nowrap">{{g.v}} <span style="font-size: 12px; font-weight: 600; color: {{g.tc}}">{{g.p}}</span></span>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px 12px; padding-top: 14px; border-top: 1px solid #E4E6EA">
+        <sc-for list="{{nv.stats}}" as="t" hint-placeholder-count="6">
+          <div><div style="font-size: 11px; color: #5A6170">{{t.l}}</div><div style="font-family: 'IBM Plex Mono', monospace; font-size: 15px; font-weight: 600; white-space: nowrap; color: {{t.c}}">{{t.v}}</div><div style="font-size: 11px; color: {{t.c}}">{{t.note}}</div></div>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+</section>
+</sc-if>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"defaultWindow":{"editor":"enum","options":["1","7","30","59"],"default":"30","section":"Timeline"},"defaultTab":{"editor":"enum","options":["all","eff","total","deep","rem","awake","sched"],"default":"all","section":"Calendar"},"defaultRing":{"editor":"enum","options":["goal","share","pct"],"default":"goal","section":"Calendar"},"summaryOpen":{"editor":"boolean","default":true,"section":"Layout"},"goalSleep":{"editor":"float","default":8,"min":5,"max":10,"step":0.5,"unit":"h","section":"Goals"},"goalDeep":{"editor":"int","default":120,"min":30,"max":180,"step":5,"unit":"min","section":"Goals"},"goalRem":{"editor":"int","default":120,"min":30,"max":180,"step":5,"unit":"min","section":"Goals"},"$preview":{"width":1440,"height":2400}}'>
+class Component extends DCLogic {
+  dataUrl() { return '/_blob/7765639e19493b63aa59a9a2ccf95085'; }
+  componentDidMount() {
+    fetch(this.dataUrl())
+      .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(j => { this.index(j.nights || []); this.setState({ loaded: true }); })
+      .catch(e => this.setState({ err: String((e && e.message) || e) }));
+    // optional breathing data (ResMed + O2 ring); without it the night view shows sleep stages only
+    if (this.apneaUrl()) fetch(this.apneaUrl())
+      .then(r => r.ok ? r.json() : null)
+      .then(j => { if (j) { this.indexApnea(j); this.setState({ apnea: true }); } })
+      .catch(() => {});
+  }
+  apneaUrl() { return ''; }
+  indexApnea(j) {
+    const D = {}, CN = {}, O2 = {};
+    (j.cpapDaily || []).forEach(r => { D[r.d] = r; });
+    (j.cpapNights || []).forEach(n => { CN[n.d] = n; });
+    (j.o2 || []).forEach(o => { if (o.end > -60 && o.start < 900 && (!O2[o.d] || o.hours > O2[o.d].hours)) O2[o.d] = o; });
+    this._cpap = D; this._cpapN = CN; this._o2 = O2;
+    this._d = null; this._dKey = null; this._calKey = null;
+  }
+  nightView(n) {
+    const P = this.pal();
+    const NAME = { deep: 'Deep sleep', core: n.staged ? 'Core sleep' : 'Asleep', rem: 'REM sleep', awake: 'Awake', bed: 'Falling asleep' };
+    const LANE = { awake: 0, bed: 0, rem: 1, core: 2, deep: 3 };
+    const EVC = { ca: '#C2410C', oa: '#0D9488', ua: '#8B5CF6', h: '#8B5CF6' }, EVY = { ca: 2, oa: 13, ua: 24, h: 24 };
+    const EVN = { ca: 'Central apnea', oa: 'Obstructive apnea', ua: 'Unclassified apnea', h: 'Hypopnea' };
+    const cn = this._cpapN && this._cpapN[n.nd], o = this._o2 && this._o2[n.nd], r = this._cpap && this._cpap[n.nd];
+    let t0 = n.inBed, t1 = n.outBed;
+    if (cn) cn.sessions.forEach(s => { t0 = Math.min(t0, s[0]); t1 = Math.max(t1, s[1]); });
+    if (o) { t0 = Math.min(t0, o.start); t1 = Math.max(t1, o.end); }
+    t0 = Math.max(-180, t0); t1 = Math.min(960, t1);
+    const span = Math.max(1, t1 - t0), X = t => (t - t0) / span * 100;
+    const v = {
+      hyp: n.all.map(s => ({
+        l: X(s.a).toFixed(2), w: Math.max(0.35, (s.b - s.a) / span * 100).toFixed(2), top: LANE[s.st] * 36 + 4, bg: P.stage[s.st],
+        tip: (s.fin ? 'Awake, still in bed' : NAME[s.st]) + ' · ' + this.clock(s.a) + ' – ' + this.clock(s.b) + ' · ' + this.dur(s.b - s.a)
+      })),
+      ticks: [], hasCpap: !!cn, hasRing: !!o, hasBreathing: !!(cn || o || r), mask: [], events: [], breath: [],
+      head: 'Sleep stages' + (cn ? ' + CPAP' : '') + (o ? ' + O2 ring' : '') + ' · hover a block for times',
+      spoTicks: [], spoLine: '', spoArea: '', y90: 0, y95: 0, hasWatch: false, watchY: 0, watchX1: 0, watchX2: 0
+    };
+    const step = span > 720 ? 120 : 60;
+    for (let h = Math.ceil(t0 / step) * step; h <= t1; h += step) v.ticks.push({ l: X(h).toFixed(2), t: this.hourLabel(h) });
+    let evs = [];
+    if (cn) {
+      v.mask = cn.sessions.map(s => ({ l: X(s[0]).toFixed(2), w: Math.max(0.3, (s[1] - s[0]) / span * 100).toFixed(2), tip: 'Mask on · ' + this.clock(s[0]) + ' – ' + this.clock(s[1]) + ' · ' + this.dur(s[1] - s[0]) }));
+      evs = cn.events.filter(e => EVC[e[0]]);
+      v.events = evs.map(e => ({ l: X(e[1]).toFixed(2), top: EVY[e[0]] + 22, c: EVC[e[0]], tip: EVN[e[0]] + ' · ' + this.clock(e[1]) + ' · ' + Math.round(e[2]) + ' s' }));
+    }
+    if (o) {
+      const lo = 84, hi = 100, Y = s => (100 - (Math.max(lo, Math.min(hi, s)) - lo) / (hi - lo) * 100).toFixed(1);
+      const pts = o.series.filter(p => p[0] >= t0 && p[0] <= t1);
+      v.spoLine = pts.map((p, k) => (k ? 'L' : 'M') + (X(p[0]) * 10).toFixed(1) + ',' + Y(p[1])).join('');
+      v.spoArea = pts.length ? v.spoLine + pts.slice().reverse().map(p => 'L' + (X(p[0]) * 10).toFixed(1) + ',' + Y(p[2])).join('') + 'Z' : '';
+      v.y90 = Y(90); v.y95 = Y(95);
+      v.spoTicks = [{ t: '95', top: Y(95) }, { t: '90', top: Y(90) }];
+      if (n.spo2 != null) { v.hasWatch = true; v.watchY = Y(n.spo2); v.watchX1 = (X(n.onset) * 10).toFixed(1); v.watchX2 = (X(n.wake) * 10).toFixed(1); }
+    }
+    if (v.hasBreathing) {
+      let covered = 0;
+      if (cn) n.all.forEach(s => { if (s.st === 'deep' || s.st === 'core' || s.st === 'rem') cn.sessions.forEach(m => { covered += Math.max(0, Math.min(s.b, m[1]) - Math.max(s.a, m[0])); }); });
+      const cnt = k => evs.filter(e => e[0] === k).length;
+      const K = '#111418', BAD = '#B45314';
+      v.breath = [
+        { l: 'Mask on', v: r ? this.dur(r.use) : '—', c: K, note: r ? (r.use >= 240 ? 'met 4 h' : 'under 4 h') : 'CPAP not used' },
+        { l: 'Sleep covered', v: cn ? Math.round(covered / Math.max(1, n.asleep) * 100) + '%' : '—', c: K, note: cn ? 'of Apple sleep' : '' },
+        { l: 'AHI', v: r ? (Math.round(r.ahi * 10) / 10).toFixed(1) : '—', c: r && r.ahi >= 5 ? BAD : K, note: r ? 'events / hour' : '' },
+        { l: 'Events', v: cn ? String(evs.length) : '—', c: K, note: cn ? cnt('ca') + ' central · ' + cnt('oa') + ' obstr. · ' + (cnt('ua') + cnt('h')) + ' other' : '' },
+        { l: 'Ring lowest SpO₂', v: o ? o.spo2Min + '%' : '—', c: o && o.spo2Min < 89 ? BAD : K, note: o ? this.dur(o.below90Min) + ' under 90%' : 'no ring' },
+        { l: 'Ring ODI', v: o ? (Math.round(o.odi3 * 10) / 10).toFixed(1) : '—', c: K, note: o ? '3% drops / hour' : '' }
+      ];
+    }
+    return v;
+  }
+  index(all) {
+    const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const byMonth = {};
+    all.forEach(x => {
+      const p = x.d.split('-');
+      x.t = Date.UTC(+p[0], +p[1] - 1, +p[2]);
+      const md = new Date(x.t + 864e5);
+      x.mkey = this.mk(md.getUTCFullYear(), md.getUTCMonth());
+      (byMonth[x.mkey] = byMonth[x.mkey] || []).push(x);
+    });
+    const keys = Object.keys(byMonth).sort().reverse();
+    this._byMonth = byMonth;
+    this._periods = keys.map(k => {
+      const y = +k.slice(0, 4), m = +k.slice(5, 7) - 1, py = m === 0 ? y - 1 : y, pm = m === 0 ? 11 : m - 1;
+      const cnt = byMonth[k].length + (byMonth[this.mk(py, pm)] || []).length;
+      return { v: k, l: (py === y ? MON[pm] + '–' + MON[m] + ' ' + y : MON[pm] + ' ' + py + '–' + MON[m] + ' ' + y) + ' · ' + cnt + ' nights' };
+    });
+    const yrs = all.length ? all[0].d.slice(0, 4) + '–' + all[all.length - 1].d.slice(0, 4) : '';
+    this._coverage = all.length.toLocaleString('en-US') + ' NIGHTS · ' + yrs;
+    this._d = null; this._dKey = null; this._calKey = null;
+  }
+  mk(y, m) { return y + '-' + (m < 9 ? '0' : '') + (m + 1); }
+  clock(m) {
+    const tot = (((21 * 60 + Math.round(m)) % 1440) + 1440) % 1440;
+    const h = Math.floor(tot / 60), mm = tot % 60;
+    const h12 = h % 12 === 0 ? 12 : h % 12;
+    return h12 + ':' + (mm < 10 ? '0' : '') + mm + (h < 12 ? ' AM' : ' PM');
+  }
+  clockS(m) {
+    const tot = (((21 * 60 + Math.round(m)) % 1440) + 1440) % 1440;
+    const h = Math.floor(tot / 60), mm = tot % 60;
+    const h12 = h % 12 === 0 ? 12 : h % 12;
+    return h12 + ':' + (mm < 10 ? '0' : '') + mm + (h < 12 ? 'a' : 'p');
+  }
+  hourLabel(m) {
+    const tot = (((21 * 60 + Math.round(m)) % 1440) + 1440) % 1440;
+    const h = Math.floor(tot / 60), h12 = h % 12 === 0 ? 12 : h % 12;
+    return h12 + (h < 12 ? ' AM' : ' PM');
+  }
+  dur(m) {
+    if (m == null) return '—';
+    m = Math.round(m);
+    const h = Math.floor(m / 60), mm = m % 60;
+    return h > 0 ? h + 'h ' + (mm < 10 ? '0' : '') + mm + 'm' : mm + 'm';
+  }
+  gt(m) { m = Math.round(m); return m % 60 === 0 ? (m / 60) + 'h' : this.dur(m); }
+  pctS(v) { return v == null ? '—' : (Math.round(v * 10) / 10).toFixed(1) + '%'; }
+  minS(v) { return v == null ? '—' : Math.round(v) + 'm'; }
+  bpmS(v) { return v == null ? '—' : Math.round(v) + ' bpm'; }
+  bin(v, e) { let b = 0; while (b < e.length && v >= e[b]) b++; return b; }
+  dash(p, C) { return (Math.max(0.001, Math.min(1, p)) * C).toFixed(2) + ' 999'; }
+  pal() {
+    return {
+      stage: { deep: '#3F33A8', core: '#3C69D9', rem: '#8FC3F2', awake: '#EC8546', bed: 'repeating-linear-gradient(135deg, #A9B1BF 0px, #A9B1BF 1.5px, #E6E9EF 1.5px, #E6E9EF 4.5px)' },
+      share: { bed: '#C9CED6', deep: '#3F33A8', core: '#3C69D9', rem: '#7DB9EE', awake: '#EC8546' },
+      effPal: ['#E3ECFB', '#BBD0F5', '#86ABEC', '#3C69D9', '#2B4FB8'],
+      line: '#EEF0F3', lineStrong: '#B4BAC4', good: '#2459C6', bad: '#B45314', muted: '#5A6170', none: '#EEF0F3'
+    };
+  }
+  miniMetrics() {
+    const self = this;
+    return {
+      deep: { label: 'Deep sleep', get: n => n.deep, fmt: v => self.dur(v), edges: [45, 60, 75, 90], pal: ['#ECEAFB', '#CBC6F3', '#9F96E8', '#6A5ED6', '#3F33A8'], legend: ['<45m', '45–60m', '60–75m', '75–90m', '≥90m'], lo: 'Less', hi: 'More' },
+      awake: { label: 'Awake time', get: n => n.awake, fmt: v => Math.round(v) + 'm', edges: [10, 20, 30, 45], pal: ['#FDEEE3', '#F9D2B5', '#F4AE7D', '#EC8546', '#B45314'], legend: ['<10m', '10–20m', '20–30m', '30–45m', '≥45m'], lo: 'Less', hi: 'More' },
+      total: { label: 'Total sleep', get: n => n.asleep, fmt: v => self.dur(v), edges: [360, 390, 420, 450], pal: ['#E0F2EF', '#B3E0D8', '#7CC7BA', '#2E9C8A', '#1F7466'], legend: ['<6h', '6–6.5h', '6.5–7h', '7–7.5h', '≥7.5h'], lo: 'Shorter', hi: 'Longer' }
+    };
+  }
+  avg(a, f) {
+    let s = 0, c = 0;
+    a.forEach(n => { const v = f(n); if (v != null && !isNaN(v)) { s += v; c++; } });
+    return c ? s / c : null;
+  }
+  table(nights, P, mA, mB) {
+    const self = this;
+    const A = nights.filter(n => n.mkey === mA), B = nights.filter(n => n.mkey === mB);
+    const fv = (k, v) => v == null ? '—' : k === 'clock' ? self.clock(v) : k === 'min' ? Math.round(v) + 'm' : k === 'dur' ? self.dur(v) : k === 'pct' ? v.toFixed(1) + '%' : k === 'bpm' ? Math.round(v) + ' bpm' : v.toFixed(1);
+    const eps = { clock: 1, min: 1, dur: 1, pct: 0.1, bpm: 0.5, num: 0.05 };
+    const mag = (k, a) => (k === 'clock' || k === 'min' || k === 'dur') ? Math.round(a) + 'm' : k === 'bpm' ? String(Math.round(a)) : a.toFixed(1);
+    const wkKeys = [];
+    nights.forEach(n => { if (wkKeys.indexOf(n.wk) < 0) wkKeys.push(n.wk); });
+    const weeksOf = f => {
+      const w = wkKeys.map(k => self.avg(nights.filter(n => n.wk === k), f)).filter(v => v != null);
+      if (!w.length) return [];
+      const lo = Math.min.apply(null, w), hi = Math.max.apply(null, w), span = hi - lo || 1;
+      return w.map((v, k) => ({ h: Math.round(18 + (v - lo) / span * 82), c: k === w.length - 1 ? '#111418' : '#A3AAB7' }));
+    };
+    const defs = [
+      ['Schedule', [['In bed', n => n.inBed, 'clock', 0], ['Fell asleep', n => n.onset, 'clock', 0], ['Woke up', n => n.wake, 'clock', 0], ['Time to fall asleep', n => n.lat, 'min', -1]]],
+      ['Duration', [['Time in bed', n => n.inBedDur, 'dur', 0], ['Total sleep', n => n.asleep, 'dur', 1], ['Efficiency', n => n.eff, 'pct', 1]]],
+      ['Stages', [['Deep', n => n.deep, 'dur', 1], ['REM', n => n.rem, 'dur', 1], ['Core', n => n.core, 'dur', 0], ['Awake', n => n.awake, 'min', -1], ['Wake-ups', n => n.wakeups, 'num', -1]]],
+      ['Vitals', [['Avg SpO₂', n => n.spo2, 'pct', 1], ['Lowest SpO₂', n => n.spo2Low, 'pct', 1], ['Sleeping HR', n => n.hr, 'bpm', -1], ['HRV', n => n.hrv, 'num', 1], ['Breathing rate', n => n.rr, 'num', 0]]]
+    ];
+    return defs.map(g => ({ name: g[0], rows: g[1].map(r => {
+      const a = self.avg(A, r[1]), b = self.avg(B, r[1]), k = r[2], dir = r[3];
+      if (a == null || b == null) return { k: r[0], sep: fv(k, a), oct: fv(k, b), d: '—', dc: P.muted, weeks: weeksOf(r[1]) };
+      const d = b - a, flat = Math.abs(d) < eps[k];
+      const good = !flat && dir !== 0 && d * dir > 0, bad = !flat && dir !== 0 && d * dir < 0;
+      return { k: r[0], sep: fv(k, a), oct: fv(k, b), d: flat ? '±0' : (d > 0 ? '▲' : '▼') + mag(k, Math.abs(d)), dc: good ? P.good : bad ? P.bad : P.muted, weeks: weeksOf(r[1]) };
+    }) }));
+  }
+  build(key) {
+    const self = this, P = this.pal(), MM = this.miniMetrics();
+    const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const MONL = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    const PLOT0 = -60, SPAN = 960;
+    const ey = +key.slice(0, 4), em = +key.slice(5, 7) - 1;
+    const sy = em === 0 ? ey - 1 : ey, sm = em === 0 ? 11 : em - 1;
+    const mA = this.mk(sy, sm), mB = key;
+    const pStart = Date.UTC(sy, sm, 1), pDow = new Date(pStart).getUTCDay();
+    const src = (this._byMonth[mA] || []).concat(this._byMonth[mB] || []);
+    const N = src.length;
+    const nights = [], byDate = {};
+    src.forEach((x, i) => {
+      const md = new Date(x.t + 864e5), pd = new Date(x.t);
+      const dow = md.getUTCDay(), mon = md.getUTCMonth(), day = md.getUTCDate(), yr = md.getUTCFullYear();
+      const lat = Math.max(0, Math.round(x.onset - x.inBed));
+      const deep = x.deep, rem = x.rem, core = x.core, awake = Math.round(x.awake);
+      const staged = deep != null;
+      const asleep = (deep || 0) + (rem || 0) + core, inBedDur = Math.max(1, x.outBed - x.inBed);
+      const n = {
+        i: i, dow: dow, mon: mon, day: day, yr: yr, mkey: x.mkey, wk: Math.floor(((md.getTime() - pStart) / 864e5 + pDow) / 7),
+        wknd: dow === 6 || dow === 0, inBed: x.inBed, lat: lat, onset: x.onset, wake: x.wake, outBed: x.outBed, wakeups: x.wakeups,
+        deep: deep, core: core, rem: rem, awake: awake, asleep: asleep, inBedDur: inBedDur, eff: Math.round(asleep / inBedDur * 100), staged: staged,
+        spo2: x.spo2, spo2Low: x.spo2Low, hr: x.hr, hrv: x.hrv, rr: x.rr,
+        label: DOW[dow] + ', ' + MON[mon] + ' ' + day, short: MON[mon] + ' ' + day, dowS: DOW[dow],
+        nightOf: 'Night of ' + MON[pd.getUTCMonth()] + ' ' + pd.getUTCDate() + ' → ' + (pd.getUTCMonth() === mon ? '' : MON[mon] + ' ') + day
+      };
+      const all = x.segs.map(s => ({ st: s[0], a: s[1], b: s[2], fin: s[3] === 1 }));
+      n.segs = [];
+      all.forEach(s => {
+        const a = Math.max(s.a, PLOT0), b = Math.min(s.b, PLOT0 + SPAN);
+        if (b <= a) return;
+        const j = n.segs.length;
+        n.segs.push({
+          st: s.st, a: s.a, b: s.b, fin: s.fin,
+          top: ((a - PLOT0) / SPAN * 100).toFixed(2), h: (Math.max(b - a, 1.5) / SPAN * 100).toFixed(2),
+          bg: P.stage[s.st], ring: 'none',
+          enter: () => self.setState({ hi: i, hs: j })
+        });
+      });
+      const low = n.spo2Low != null && n.spo2Low < 89;
+      n.effBg = P.effPal[this.bin(n.eff, [80, 85, 90, 95])];
+      n.effTip = n.label + ' · efficiency ' + n.eff + '%';
+      n.dot = low ? '8px' : '3px';
+      n.dotC = low ? '#B45314' : (n.spo2Low == null ? 'transparent' : '#C9CED6');
+      n.spoTip = n.spo2Low == null ? n.label + ' · no SpO₂ data' : n.label + ' · lowest SpO₂ ' + n.spo2Low + '% · avg ' + this.pctS(n.spo2);
+      n.awH = Math.min(100, awake / 60 * 100).toFixed(1);
+      n.awTip = n.label + ' · awake ' + awake + 'm · ' + n.wakeups + ' wake-ups';
+      const pct = v => v == null ? 0 : Math.round(v / inBedDur * 100);
+      n.det = {
+        date: n.label, sub: n.nightOf.toUpperCase(), total: this.dur(asleep), eff: n.eff + '%', wakeups: String(n.wakeups),
+        times: [{ l: 'In bed', v: this.clock(n.inBed) }, { l: 'Asleep', v: this.clock(n.onset) }, { l: 'Woke', v: this.clock(n.wake) }, { l: 'Out of bed', v: this.clock(n.outBed) }],
+        stages: [
+          { name: 'Falling asleep', c: P.share.bed, v: this.dur(lat), pct: pct(lat) },
+          { name: 'Deep', c: P.stage.deep, v: this.dur(deep), pct: pct(deep) },
+          { name: staged ? 'Core' : 'Asleep (no stages)', c: P.stage.core, v: this.dur(core), pct: pct(core) },
+          { name: 'REM', c: P.stage.rem, v: this.dur(rem), pct: pct(rem) },
+          { name: 'Awake', c: P.stage.awake, v: this.dur(awake), pct: pct(awake) }
+        ],
+        vitals: [{ l: 'Avg SpO₂', v: this.pctS(n.spo2) }, { l: 'Lowest SpO₂', v: this.pctS(n.spo2Low) }, { l: 'Sleeping HR', v: this.bpmS(n.hr) }]
+      };
+      n.nd = x.d;
+      n.all = all;
+      n.nvTimes = n.det.times.concat([{ l: 'To fall asleep', v: lat + 'm' }]);
+      n.nvStats = [
+        { l: 'Efficiency', v: n.eff + '%', c: '#111418', note: '' },
+        { l: 'Awake', v: awake + 'm', c: '#111418', note: '' },
+        { l: 'Wake-ups', v: String(n.wakeups), c: '#111418', note: '' },
+        { l: 'Avg SpO₂', v: this.pctS(n.spo2), c: '#111418', note: '' },
+        { l: 'Lowest SpO₂', v: this.pctS(n.spo2Low), c: low ? '#B45314' : '#111418', note: low ? 'below 89%' : '' },
+        { l: 'Sleeping HR', v: this.bpmS(n.hr), c: '#111418', note: n.hrv == null ? '' : 'HRV ' + Math.round(n.hrv) + ' ms' }
+      ];
+      nights.push(n);
+      byDate[yr + '-' + mon + '-' + day] = n;
+    });
+    const z = { c: 'transparent', da: '0 999', off: '0' };
+    const monthsBase = [[sy, sm], [ey, em]].map(ym => {
+      const y = ym[0], mon = ym[1], mkey = this.mk(y, mon);
+      const first = new Date(Date.UTC(y, mon, 1)).getUTCDay(), dim = new Date(Date.UTC(y, mon + 1, 0)).getUTCDate();
+      const monNights = nights.filter(n => n.mkey === mkey);
+      const cells = [];
+      for (let k = 0; k < first; k++) cells.push({ blank: true, isDay: false, isFuture: false, day: '', tip: '' });
+      for (let day = 1; day <= dim; day++) {
+        const n = byDate[y + '-' + mon + '-' + day];
+        if (!n) { cells.push({ blank: false, isDay: false, isFuture: true, day: day, tip: MON[mon] + ' ' + day + ' · no data' }); continue; }
+        cells.push({
+          blank: false, isDay: true, isFuture: false, day: day, n: n, tip: '', aria: n.label + ', open this night',
+          pick: () => self.setState({ sel: n.i, win: 1, off: N - 1 - n.i, hi: -1, hs: -1 }),
+          bd: '1px solid #E1E4E8', bg: '#FFFFFF', pressed: 'false', flagC: n.spo2Low != null && n.spo2Low < 89 ? '#B45314' : 'transparent',
+          bedT: this.clockS(n.inBed), upT: this.clockS(n.wake),
+          wl: Math.max(0, (n.inBed - PLOT0) / SPAN * 100).toFixed(1), ww: Math.min(100, n.inBedDur / SPAN * 100).toFixed(1),
+          sl: Math.max(0, (n.onset - PLOT0) / SPAN * 100).toFixed(1), sw: Math.min(100, (n.wake - n.onset) / SPAN * 100).toFixed(1),
+          r1: '0 999', r2: '0 999', r3: '0 999', s0: z, s1: z, s2: z, s3: z, s4: z, ringC: 'transparent', ringT: 'transparent', ringDa: '0 999',
+          center: '', l1: '', l2: '', p1: '', p2: '', p3: ''
+        });
+      }
+      const minis = ['deep', 'awake', 'total'].map(k => {
+        const M = MM[k], mc = [];
+        for (let q = 0; q < first; q++) mc.push({ blank: true, isDay: false, isFuture: false, bg: '', tip: '' });
+        for (let day = 1; day <= dim; day++) {
+          const n = byDate[y + '-' + mon + '-' + day];
+          if (!n) { mc.push({ blank: false, isDay: false, isFuture: true, bg: '', tip: MON[mon] + ' ' + day + ' · no data' }); continue; }
+          const v = M.get(n);
+          if (v == null) { mc.push({ blank: false, isDay: true, isFuture: false, i: n.i, bg: P.none, ring: 'none', tip: n.label + ' · no stage data' }); continue; }
+          mc.push({ blank: false, isDay: true, isFuture: false, i: n.i, bg: M.pal[this.bin(v, M.edges)], ring: 'none', tip: n.label + ' · ' + M.label + ' ' + M.fmt(v) });
+        }
+        const av = this.avg(monNights, M.get);
+        return { title: M.label, avg: av == null ? 'avg —' : 'avg ' + M.fmt(av), cells: mc };
+      });
+      return { name: MONL[mon] + ' ' + y, cells: cells, minis: minis };
+    });
+    const miniLegend = ['deep', 'awake', 'total'].map(k => ({ title: MM[k].label, lo: MM[k].lo, hi: MM[k].hi, sw: MM[k].pal.map((c, b) => ({ c: c, l: MM[k].legend[b] })) }));
+    const hours = [];
+    for (let h = 0; h <= SPAN / 60; h++) {
+      const m = PLOT0 + h * 60;
+      hours.push({ top: (h * 60 / SPAN * 100).toFixed(3), label: this.hourLabel(m), line: m === 180 ? P.lineStrong : P.line, fw: m === 180 ? 600 : 400 });
+    }
+    const legend = [{ c: P.stage.deep, l: 'Deep' }, { c: P.stage.core, l: 'Core (or asleep, before stages)' }, { c: P.stage.rem, l: 'REM' }, { c: P.stage.awake, l: 'Awake' }, { c: P.stage.bed, l: 'In bed, not asleep' }];
+    const flags = [
+      { n: String(nights.filter(n => n.spo2Low != null && n.spo2Low < 89).length), l: 'nights with lowest SpO₂ under 89%', c: '#B45314' },
+      { n: String(nights.filter(n => n.eff < 85).length), l: 'nights under 85% efficiency', c: '#111418' },
+      { n: String(nights.filter(n => n.lat > 30).length), l: 'nights over 30 min to fall asleep', c: '#111418' }
+    ];
+    const tabsBase = [['all', 'All metrics'], ['eff', 'Efficiency'], ['total', 'Total sleep'], ['deep', 'Deep'], ['rem', 'REM'], ['awake', 'Awake'], ['sched', 'Bed & wake times']].map(p => ({ key: p[0], l: p[1], pick: () => self.setState({ tab: p[0] }) }));
+    const ringBase = ['goal', 'share', 'pct'].map(v => ({ v: v, pick: () => self.setState({ ring: v }) }));
+    const lanes = [{ l: 'Awake' }, { l: 'REM' }, { l: 'Core' }, { l: 'Deep' }];
+    const f0 = nights[0], f1 = nights[N - 1];
+    const title = f0.yr === f1.yr ? f0.short + ' – ' + f1.short + ', ' + f1.yr : f0.short + ', ' + f0.yr + ' – ' + f1.short + ', ' + f1.yr;
+    return {
+      P: P, PLOT0: PLOT0, SPAN: SPAN, N: N, nights: nights, monthsBase: monthsBase, miniLegend: miniLegend, hours: hours, legend: legend, flags: flags, tabsBase: tabsBase, ringBase: ringBase, lanes: lanes,
+      table: this.table(nights, P, mA, mB), wk: ['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(d => ({ d: d })),
+      title: title, colA: MON[sm].toUpperCase(), colB: MON[em].toUpperCase(),
+      deltaNote: 'Δ is ' + MONL[em] + ' minus ' + MONL[sm] + '.', sumLabel: 'Summary · ' + MON[sm] + ' vs ' + MON[em]
+    };
+  }
+  calendar(tab, ring, g) {
+    const key = this._dKey + '|' + tab + '|' + ring + '|' + g.total + '|' + g.deep + '|' + g.rem;
+    if (this._calKey === key) return this._cal;
+    const self = this, D = this._d, P = D.P;
+    const C1 = 2 * Math.PI * 20, C2 = 2 * Math.PI * 14.5, C3 = 2 * Math.PI * 9, CO = 2 * Math.PI * 18;
+    const pc = p => Math.round(p * 100);
+    const gS = g.total * 60;
+    const SM = {
+      eff: { c: '#3C69D9', t: '#DCE6FA', p: n => n.eff / 100, center: n => n.eff + '%', l1: n => self.dur(n.asleep), l2: n => '/ ' + self.dur(n.inBedDur) },
+      total: { c: '#2E9C8A', t: '#D5EEEA', p: n => n.asleep / gS, center: n => pc(n.asleep / gS) + '%', l1: n => self.dur(n.asleep), l2: () => 'of ' + self.gt(gS) },
+      deep: { c: '#3F33A8', t: '#E1DEF8', p: n => (n.deep || 0) / g.deep, center: n => n.staged ? pc(n.deep / g.deep) + '%' : '—', l1: n => self.dur(n.deep), l2: n => n.staged ? 'of ' + self.gt(g.deep) : 'no stages' },
+      rem: { c: '#2E86C9', t: '#D8EAF7', p: n => (n.rem || 0) / g.rem, center: n => n.staged ? pc(n.rem / g.rem) + '%' : '—', l1: n => self.dur(n.rem), l2: n => n.staged ? 'of ' + self.gt(g.rem) : 'no stages' },
+      awake: { c: '#D9702F', t: '#FBE3D3', p: n => n.awake / 60, center: n => n.awake + 'm', l1: n => pc(n.awake / n.inBedDur) + '%', l2: () => 'of night' }
+    };
+    let kind = 'one', spec = null;
+    if (tab === 'sched') kind = 'sched';
+    else if (tab === 'all' && ring === 'goal') kind = 'three';
+    else if (tab === 'all' && ring === 'share') kind = 'share';
+    else spec = tab === 'all' ? SM.total : SM[tab];
+    const months = D.monthsBase.map(m => ({ name: m.name, minis: m.minis, cells: m.cells.map(c => {
+      if (!c.isDay) return c;
+      const n = c.n, o = Object.assign({}, c);
+      const ps = pc(n.asleep / gS), pd = n.staged ? pc(n.deep / g.deep) : null, pr = n.staged ? pc(n.rem / g.rem) : null;
+      const stg = n.staged ? '\nDeep ' + self.dur(n.deep) + ' (' + pd + '%) · REM ' + self.dur(n.rem) + ' (' + pr + '%) · awake ' + n.awake + 'm' : '\nNo stage data this night · awake ' + n.awake + 'm';
+      const cp = self._cpap && self._cpap[n.nd], ring = self._o2 && self._o2[n.nd];
+      const brTip = (cp ? '\nCPAP ' + self.dur(cp.use) + ' · AHI ' + (Math.round(cp.ahi * 10) / 10) : '') + (ring ? '\nO2 ring lowest ' + ring.spo2Min + '% · ODI ' + ring.odi3 : '');
+      o.tip = n.label + '\nAsleep ' + self.dur(n.asleep) + ' (' + ps + '% of ' + self.gt(gS) + ' goal) · efficiency ' + n.eff + '%' + stg +
+        '\nIn bed ' + self.clock(n.inBed) + ' → woke ' + self.clock(n.wake) + (n.spo2Low == null ? '' : ' · lowest SpO₂ ' + n.spo2Low + '%') + brTip + '\nClick to open this night';
+      if (kind === 'three') {
+        o.r1 = self.dash(n.asleep / gS, C1); o.r2 = self.dash((n.deep || 0) / g.deep, C2); o.r3 = self.dash((n.rem || 0) / g.rem, C3);
+        o.p1 = String(ps); o.p2 = pd == null ? '–' : String(pd); o.p3 = pr == null ? '–' : String(pr); o.l2 = self.dur(n.asleep);
+      } else if (kind === 'share') {
+        let acc = 0;
+        const sh = [['bed', n.lat], ['deep', n.deep || 0], ['core', n.core], ['rem', n.rem || 0], ['awake', n.awake]].map(p => {
+          const len = p[1] / n.inBedDur * CO;
+          const s = { c: P.share[p[0]], da: len.toFixed(2) + ' ' + (CO - len + 0.01).toFixed(2), off: (-acc).toFixed(2) };
+          acc += len;
+          return s;
+        });
+        o.s0 = sh[0]; o.s1 = sh[1]; o.s2 = sh[2]; o.s3 = sh[3]; o.s4 = sh[4];
+        o.center = n.eff + '%'; o.l1 = self.dur(n.asleep); o.l2 = 'asleep';
+      } else if (kind === 'one') {
+        o.ringC = spec.c; o.ringT = spec.t; o.ringDa = self.dash(spec.p(n), CO);
+        o.center = spec.center(n); o.l1 = spec.l1(n); o.l2 = spec.l2(n);
+      }
+      return o;
+    }) }));
+    let calLegend = [], legendNote = '';
+    if (kind === 'three') {
+      calLegend = [{ c: '#2E9C8A', l: 'Outer · total sleep, goal ' + this.gt(gS) }, { c: '#3F33A8', l: 'Middle · deep, goal ' + this.gt(g.deep) }, { c: '#2E86C9', l: 'Inner · REM, goal ' + this.gt(g.rem) }];
+      legendNote = 'Numbers under each ring: % of each goal (sleep · deep · REM). A closed ring means the goal was met. – means no stage data (before 2023).';
+    } else if (kind === 'share') {
+      calLegend = [{ c: P.share.bed, l: 'Falling asleep' }, { c: P.share.deep, l: 'Deep' }, { c: P.share.core, l: 'Core' }, { c: P.share.rem, l: 'REM' }, { c: P.share.awake, l: 'Awake' }];
+      legendNote = 'Full circle = time in bed. Middle number = efficiency.';
+    } else if (kind === 'sched') {
+      calLegend = [{ c: '#C9CED6', l: 'In bed' }, { c: '#3C69D9', l: 'Asleep' }];
+      legendNote = 'Track runs 8 PM → 12 PM.';
+    } else if (tab === 'awake') {
+      calLegend = [{ c: spec.c, l: 'Full ring = 60 min awake' }];
+      legendNote = 'Middle = minutes awake; below = share of the night. Less is better.';
+    } else if (tab === 'eff') {
+      calLegend = [{ c: spec.c, l: 'Full ring = 100% efficiency' }];
+      legendNote = 'Below: time asleep / time in bed.';
+    } else {
+      const nm = tab === 'deep' ? 'deep sleep' : tab === 'rem' ? 'REM' : 'total sleep';
+      const gv = tab === 'deep' ? g.deep : tab === 'rem' ? g.rem : gS;
+      calLegend = [{ c: spec.c, l: 'Ring = ' + nm + ' ÷ ' + this.gt(gv) + ' goal' }];
+      legendNote = 'Middle number = % of goal. A closed ring means the goal was met.';
+    }
+    this._calKey = key;
+    this._cal = { months: months, calLegend: calLegend, legendNote: legendNote, kind: kind };
+    return this._cal;
+  }
+  tip(D, hi, hs, start, W, single, H) {
+    const empty = { show: false, left: '0', top: '0', tf: 'none', date: '', sub: '', sw: 'transparent', name: '', len: '', range: '', note: '', hasNote: false, asleep: '', eff: '', spo: '', hr: '' };
+    if (hi < start || hi >= start + W || hs < 0 || !D.nights[hi] || !D.nights[hi].segs[hs]) return empty;
+    const n = D.nights[hi], s = n.segs[hs], k = hi - start;
+    const NAME = { deep: 'Deep sleep', core: n.staged ? 'Core sleep' : 'Asleep', rem: 'REM sleep', awake: 'Awake', bed: 'Falling asleep' };
+    let name = NAME[s.st], note = '';
+    if (s.st === 'bed') note = 'Got in bed ' + this.clock(n.inBed) + ' · asleep at ' + this.clock(n.onset);
+    if (s.fin) { name = 'Awake, still in bed'; note = 'Woke ' + this.clock(n.wake) + ' · up at ' + this.clock(n.outBed); }
+    const mid = Number(s.top) + Number(s.h) / 2, lo = 92 / H * 100;
+    const frac = single ? 0.5 : 1, gap = single ? 74 : 14;
+    const flip = !single && k > W * 0.62;
+    return {
+      show: true, left: ((k + 0.5) / W * frac * 100).toFixed(2), top: Math.min(100 - lo, Math.max(lo, mid)).toFixed(2),
+      tf: flip ? 'translate(calc(-100% - ' + gap + 'px), -50%)' : 'translate(' + gap + 'px, -50%)',
+      date: n.label, sub: n.nightOf, sw: s.bg, name: name, len: this.dur(s.b - s.a),
+      range: this.clock(s.a) + ' – ' + this.clock(s.b), note: note, hasNote: note !== '',
+      asleep: this.dur(n.asleep), eff: n.eff + '% eff', spo: n.spo2Low == null ? '—' : n.spo2Low + '%', hr: n.hr == null ? '—' : n.hr
+    };
+  }
+  renderVals() {
+    const self = this, st = this.state || {};
+    if (!this._periods || !this._periods.length) {
+      const msg = st.err ? 'Could not load sleep data · ' + st.err : (st.loaded ? 'No nights found in the data file.' : 'Loading sleep data…');
+      return {
+        ready: false, notReady: true, loadMsg: msg, title: 'Sleep report', coverage: '', flags: [], periods: [], periodVal: '', pickPeriod: () => {},
+        per: { earlier: () => {}, later: () => {}, earlierDis: true, laterDis: true, earlierOp: 0.35, laterOp: 0.35 }
+      };
+    }
+    const PER = this._periods;
+    let pIdx = PER.findIndex(p => p.v === st.period);
+    if (pIdx < 0) pIdx = 0;
+    const pKey = PER[pIdx].v;
+    if (this._dKey !== pKey) { this._d = this.build(pKey); this._dKey = pKey; this._calKey = null; }
+    if (!this._clear) this._clear = () => this.setState({ hi: -1, hs: -1 });
+    const D = this._d, N = D.N;
+    const goPeriod = k => { if (PER[k]) self.setState({ period: PER[k].v, sel: null, off: 0, hi: -1, hs: -1 }); };
+    const per = {
+      earlier: () => goPeriod(pIdx + 1), earlierDis: pIdx >= PER.length - 1, earlierOp: pIdx >= PER.length - 1 ? 0.35 : 1,
+      later: () => goPeriod(pIdx - 1), laterDis: pIdx <= 0, laterOp: pIdx <= 0 ? 0.35 : 1
+    };
+    const pickPeriod = e => { const k = PER.findIndex(p => p.v === e.target.value); if (k >= 0) goPeriod(k); };
+    const hi = st.hi == null ? -1 : st.hi, hs = st.hs == null ? -1 : st.hs;
+    let win = Number(st.win || this.props.defaultWindow || 30);
+    if ([1, 7, 30, 59].indexOf(win) < 0) win = 30;
+    const eff = w => w === 59 ? N : Math.min(w, N);
+    const W = eff(win);
+    const off = Math.max(0, Math.min(st.off || 0, N - W));
+    const start = N - off - W, single = win === 1;
+    let sel = single ? start : (st.sel == null ? N - 1 : st.sel);
+    sel = Math.max(0, Math.min(N - 1, sel));
+    const vis0 = D.nights.slice(start, start + W);
+    const H = { 1: 560, 7: 520, 30: 450, 59: 380 }[win];
+    const vis = vis0.map(n => {
+      const colBg = n.i === hi ? 'rgba(17, 20, 24, 0.07)' : (!single && n.i === sel ? 'rgba(36, 89, 198, 0.08)' : 'transparent');
+      if (n.i !== hi) return Object.assign({}, n, { colBg: colBg });
+      return Object.assign({}, n, { colBg: colBg, segs: n.segs.map((s, j) => j === hs ? Object.assign({}, s, { ring: '0 0 0 2px #111418' }) : s) });
+    });
+    let lastMon = -1;
+    const xlabels = vis0.map(n => {
+      const newMon = n.mon !== lastMon; lastMon = n.mon;
+      return { t: W > 31 ? (newMon ? n.short : (n.dow === 1 ? String(n.day) : '')) : W > 7 ? ((newMon || n.dow === 1) ? n.short : '') : n.dowS + ' ' + n.day };
+    });
+    const first = vis0[0], last = vis0[vis0.length - 1];
+    const rangeLabel = single ? (start === N - 1 ? 'Latest night · ' : '') + first.label + ', ' + first.yr : first.short + ' – ' + last.short + ' · ' + W + ' nights';
+    const nav = {
+      earlier: () => self.setState(single ? { off: off + 1, sel: start - 1, hi: -1, hs: -1 } : { off: Math.min(off + W, N - W), hi: -1, hs: -1 }),
+      earlierDis: start <= 0, earlierOp: start <= 0 ? 0.35 : 1,
+      later: () => self.setState(single ? { off: off - 1, sel: start + 1, hi: -1, hs: -1 } : { off: Math.max(off - W, 0), hi: -1, hs: -1 }),
+      laterDis: off <= 0, laterOp: off <= 0 ? 0.35 : 1
+    };
+    const pressed = on => ({ pressed: on ? 'true' : 'false', bg: on ? '#111418' : '#FFFFFF', fg: on ? '#FFFFFF' : '#111418' });
+    const winBtns = [[1, '1 night'], [7, '7 nights'], [30, '30 nights'], [59, '2 months']].map(w => Object.assign({
+      l: w[1], pick: () => self.setState({ win: w[0], off: Math.max(0, Math.min(N - eff(w[0]), N - 1 - sel)), hi: -1, hs: -1 })
+    }, pressed(w[0] === win)));
+
+    let tab = st.tab || this.props.defaultTab || 'all';
+    if (['all', 'eff', 'total', 'deep', 'rem', 'awake', 'sched'].indexOf(tab) < 0) tab = 'all';
+    let ring = st.ring || this.props.defaultRing || 'goal';
+    if (['goal', 'share', 'pct'].indexOf(ring) < 0) ring = 'goal';
+    const g = { total: Number(this.props.goalSleep ?? 8) || 8, deep: Number(this.props.goalDeep ?? 120) || 120, rem: Number(this.props.goalRem ?? 120) || 120 };
+    const gS = g.total * 60;
+    const cal = this.calendar(tab, ring, g);
+    const months = cal.months.map(m => ({
+      name: m.name,
+      cells: m.cells.map(c => (c.isDay && c.n.i === sel) ? Object.assign({}, c, { bd: '2px solid #111418', bg: '#F3F5F9', pressed: 'true' }) : c),
+      minis: m.minis.map(mi => ({ title: mi.title, avg: mi.avg, cells: mi.cells.map(c => (c.isDay && c.i === sel) ? Object.assign({}, c, { ring: '0 0 0 1.5px #111418' }) : c) }))
+    }));
+    const tabs = D.tabsBase.map(t => Object.assign({ l: t.l, pick: t.pick }, pressed(t.key === tab)));
+    const ringLabels = { goal: 'Goal rings', share: 'Share of night', pct: '% of ' + this.gt(gS) + ' goal' };
+    const ringBtns = D.ringBase.map(r => Object.assign({ l: ringLabels[r.v], pick: r.pick }, pressed(r.v === ring)));
+    const sumOpen = st.sumOpen == null ? (this.props.summaryOpen ?? true) !== false : st.sumOpen;
+
+    const sn = D.nights[sel];
+    const setSel = i => self.setState(single ? { sel: i, off: N - 1 - i, hi: -1, hs: -1 } : { sel: i });
+    const ps = sn.asleep / gS, pd = (sn.deep || 0) / g.deep, pr = (sn.rem || 0) / g.rem;
+    const pcs = p => Math.round(p * 100) + '%';
+    const tc = p => p >= 1 ? '#1F7466' : '#5A6170';
+    const isLatest = sel === N - 1 && pIdx === 0;
+    const nv = Object.assign(this.nightView(sn), {
+      eyebrow: isLatest ? 'LATEST NIGHT' : 'SELECTED NIGHT', date: sn.label + ', ' + sn.yr, sub: sn.nightOf, notLast: sel !== N - 1,
+      prev: () => setSel(sel - 1), prevDis: sel <= 0, prevOp: sel <= 0 ? 0.35 : 1,
+      next: () => setSel(sel + 1), nextDis: sel >= N - 1, nextOp: sel >= N - 1 ? 0.35 : 1,
+      last: () => setSel(N - 1),
+      times: sn.nvTimes, stages: sn.det.stages, stats: sn.nvStats,
+      r1: this.dash(ps, 2 * Math.PI * 20), r2: this.dash(pd, 2 * Math.PI * 14.5), r3: this.dash(pr, 2 * Math.PI * 9),
+      ringAria: sn.staged ? 'Goal rings: total sleep ' + pcs(ps) + ', deep ' + pcs(pd) + ', REM ' + pcs(pr) + ' of goal' : 'Goal ring: total sleep ' + pcs(ps) + ' of goal; no stage data',
+      goals: [
+        { c: '#2E9C8A', l: 'Total sleep', v: this.dur(sn.asleep), p: pcs(ps) + ' of ' + this.gt(gS), tc: tc(ps) },
+        { c: '#3F33A8', l: 'Deep', v: this.dur(sn.deep), p: sn.staged ? pcs(pd) + ' of ' + this.gt(g.deep) : 'no stage data', tc: sn.staged ? tc(pd) : '#5A6170' },
+        { c: '#2E86C9', l: 'REM', v: this.dur(sn.rem), p: sn.staged ? pcs(pr) + ' of ' + this.gt(g.rem) : 'no stage data', tc: sn.staged ? tc(pr) : '#5A6170' }
+      ]
+    });
+    const isSched = tab === 'sched';
+    return {
+      ready: true, notReady: false, loadMsg: '', coverage: this._coverage, title: D.title,
+      periods: PER, periodVal: pKey, pickPeriod: pickPeriod, per: per,
+      colA: D.colA, colB: D.colB, deltaNote: D.deltaNote, sumLabel: D.sumLabel,
+      flags: D.flags, legend: D.legend, hours: D.hours, wk: D.wk, table: D.table, lanes: D.lanes, miniLegend: D.miniLegend, clear: this._clear,
+      vis: vis, xlabels: xlabels, rangeLabel: rangeLabel, nav: nav, winBtns: winBtns, single: single, showStrips: !single,
+      plotH: H, minW: W > 31 ? '700px' : W > 7 ? '560px' : single ? '600px' : '0px', colRight: single ? '50%' : '0%',
+      barMax: W > 31 ? '100%' : W > 7 ? '28px' : W > 1 ? '64px' : '120px',
+      det: (single ? first : D.nights[N - 1]).det, tip: this.tip(D, hi, hs, start, W, single, H),
+      tabs: tabs, ringBtns: ringBtns, isAll: tab === 'all', isSched: isSched, isRing: !isSched,
+      kind3: cal.kind === 'three', notKind3: cal.kind !== 'three', kindShare: cal.kind === 'share', kindOne: cal.kind === 'one',
+      ringPx: sumOpen ? 42 : 54, cellH: isSched ? 84 : (sumOpen ? 100 : 114),
+      months: months, calLegend: cal.calLegend, legendNote: cal.legendNote,
+      goalsTxt: 'Goals · sleep ' + this.gt(gS) + ' · deep ' + this.gt(g.deep) + ' · REM ' + this.gt(g.rem),
+      sumOpen: sumOpen, sumClosed: !sumOpen, asideFlex: sumOpen ? '1 1 400px' : '0 0 52px', toggleSum: () => self.setState({ sumOpen: !sumOpen }),
+      nv: nv
+    };
+  }
+}
+</script>
+</body>
+</html>
