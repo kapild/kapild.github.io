@@ -20,7 +20,7 @@ button:focus-visible,select:focus-visible{outline:2px solid #2459C6;outline-offs
 
 <header style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px; padding-bottom: 18px; border-bottom: 2px solid #111418">
   <div>
-    <div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 500; letter-spacing: 0.06em; color: #5A6170">SLEEP REPORT · APPLE HEALTH EXPORT · {{coverage}}</div>
+    <div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 500; letter-spacing: 0.06em; color: #5A6170">SLEEP REPORT · {{sources}} · {{coverage}}</div>
     <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; margin-top: 6px">
       <h1 style="margin: 0; font-size: 30px; font-weight: 600; letter-spacing: -0.01em">{{title}}</h1>
       <div style="display: flex; align-items: center; gap: 8px">
@@ -610,7 +610,7 @@ class Component extends DCLogic {
       const K = '#111418', BAD = '#B45314';
       v.breath = [
         { l: 'Mask on', v: r ? this.dur(r.use) : '—', c: K, note: r ? (r.use >= 240 ? 'met 4 h' : 'under 4 h') : 'CPAP not used' },
-        { l: 'Sleep covered', v: cn ? Math.round(covered / Math.max(1, n.asleep) * 100) + '%' : '—', c: K, note: cn ? 'of Apple sleep' : '' },
+        { l: 'Sleep covered', v: cn ? Math.round(covered / Math.max(1, n.asleep) * 100) + '%' : '—', c: K, note: cn ? 'of tracked sleep' : '' },
         { l: 'AHI', v: r ? (Math.round(r.ahi * 10) / 10).toFixed(1) : '—', c: r && r.ahi >= 5 ? BAD : K, note: r ? 'events / hour' : '' },
         { l: 'Events', v: cn ? String(evs.length) : '—', c: K, note: cn ? cnt('ca') + ' central · ' + cnt('oa') + ' obstr. · ' + (cnt('ua') + cnt('h')) + ' other' : '' },
         { l: 'Ring lowest SpO₂', v: o ? o.spo2Min + '%' : '—', c: o && o.spo2Min < 89 ? BAD : K, note: o ? this.dur(o.below90Min) + ' under 90%' : 'no ring' },
@@ -638,6 +638,7 @@ class Component extends DCLogic {
     });
     const yrs = all.length ? all[0].d.slice(0, 4) + '–' + all[all.length - 1].d.slice(0, 4) : '';
     this._coverage = all.length.toLocaleString('en-US') + ' NIGHTS · ' + yrs;
+    this._sources = all.some(x => x.src === 'google') ? 'APPLE HEALTH + GOOGLE HEALTH' : 'APPLE HEALTH EXPORT';
     this._d = null; this._dKey = null; this._calKey = null;
   }
   mk(y, m) { return y + '-' + (m < 9 ? '0' : '') + (m + 1); }
@@ -745,7 +746,7 @@ class Component extends DCLogic {
         deep: deep, core: core, rem: rem, awake: awake, asleep: asleep, inBedDur: inBedDur, eff: Math.round(asleep / inBedDur * 100), staged: staged,
         spo2: x.spo2, spo2Low: x.spo2Low, hr: x.hr, hrv: x.hrv, rr: x.rr,
         label: DOW[dow] + ', ' + MON[mon] + ' ' + day, short: MON[mon] + ' ' + day, dowS: DOW[dow],
-        nightOf: 'Night of ' + MON[pd.getUTCMonth()] + ' ' + pd.getUTCDate() + ' → ' + (pd.getUTCMonth() === mon ? '' : MON[mon] + ' ') + day
+        nightOf: 'Night of ' + MON[pd.getUTCMonth()] + ' ' + pd.getUTCDate() + ' → ' + (pd.getUTCMonth() === mon ? '' : MON[mon] + ' ') + day + (x.src === 'google' ? ' · Google Health' : ' · Apple Health')
       };
       const all = x.segs.map(s => ({ st: s[0], a: s[1], b: s[2], fin: s[3] === 1 }));
       n.segs = [];
@@ -952,7 +953,7 @@ class Component extends DCLogic {
     if (!this._periods || !this._periods.length) {
       const msg = st.err ? 'Could not load sleep data · ' + st.err : (st.loaded ? 'No nights found in the data file.' : 'Loading sleep data…');
       return {
-        ready: false, notReady: true, loadMsg: msg, title: 'Sleep report', coverage: '', flags: [], periods: [], periodVal: '', pickPeriod: () => {},
+        ready: false, notReady: true, loadMsg: msg, title: 'Sleep report', coverage: '', sources: '', flags: [], periods: [], periodVal: '', pickPeriod: () => {},
         per: { earlier: () => {}, later: () => {}, earlierDis: true, laterDis: true, earlierOp: 0.35, laterOp: 0.35 }
       };
     }
@@ -1042,7 +1043,7 @@ class Component extends DCLogic {
     });
     const isSched = tab === 'sched';
     return {
-      ready: true, notReady: false, loadMsg: '', coverage: this._coverage, title: D.title,
+      ready: true, notReady: false, loadMsg: '', coverage: this._coverage, sources: this._sources, title: D.title,
       periods: PER, periodVal: pKey, pickPeriod: pickPeriod, per: per,
       colA: D.colA, colB: D.colB, deltaNote: D.deltaNote, sumLabel: D.sumLabel,
       flags: D.flags, legend: D.legend, hours: D.hours, wk: D.wk, table: D.table, lanes: D.lanes, miniLegend: D.miniLegend, clear: this._clear,
