@@ -13,18 +13,21 @@ body{margin:0;background:#F1F2F4;font-family:'IBM Plex Sans',system-ui,sans-seri
 #views a[aria-current="page"]{background:#111418;color:#fff}
 #views a:focus-visible{outline:2px solid #2459C6;outline-offset:2px}
 #analysis{max-width:1440px;margin:0 auto;padding:28px 24px 48px}
-#timeline{max-width:1440px;margin:0 auto;padding:0 24px 48px}
+#timeline,#night{max-width:1440px;margin:0 auto;padding:28px 24px 48px}
 </style>
 </head>
 <body>
 <nav id="views" aria-label="View">
   <a href="#sleep" data-view="sleep">Sleep report</a>
+  <a href="#night" data-view="night">Night detail</a>
+  <a href="#timeline" data-view="timeline">Timeline + breathing</a>
   <a href="#cpap" data-view="cpap">CPAP &amp; oxygen</a>
   <a href="#overlay" data-view="overlay">Night overlay</a>
   <a href="#breathing" data-view="breathing">Breathing analysis</a>
 </nav>
 <div id="root"><div id="boot">Loading dashboard…</div></div>
 <div id="timeline" hidden></div>
+<div id="night" hidden></div>
 <div id="analysis" hidden><div id="boot">Loading breathing data…</div></div>
 <script>
 // Renders a canvas artboard (.dc.html) as a plain page: the same markup and
@@ -138,33 +141,42 @@ body{margin:0;background:#F1F2F4;font-family:'IBM Plex Sans',system-ui,sans-seri
     if (inst.componentDidMount) inst.componentDidMount();
   }
 
-  // views: the sleep report (artboard) and the breathing views (breathing.js: a · b · c)
+  // views: the sleep report (artboard), the breathing views (breathing.js: a · b · c),
+  // the nightly timeline (timeline.js) and the one-night detail (nightdetail.js)
   const BREATH = { cpap: 'a', overlay: 'b', breathing: 'c' };
   const analysis = document.getElementById('analysis');
-  const timeline = document.getElementById('timeline');
   let views = null, loading = false, current = 'sleep';
-  // nightly timeline + CPAP / O2 ring (timeline.js), under the sleep report
-  let tl = null, tlLoading = false;
-  function loadTimeline() {
-    if (tl || tlLoading) return;
-    tlLoading = true;
-    timeline.innerHTML = '<div id="boot">Loading timeline…</div>';
-    Promise.all([
-      fetch(DATA_URL).then(r => { if (!r.ok) throw new Error('nights.json HTTP ' + r.status); return r.json(); }),
-      fetch(APNEA_URL).then(r => { if (!r.ok) throw new Error('apnea.json HTTP ' + r.status); return r.json(); }),
-      new Promise((ok, bad) => { const sc = document.createElement('script'); sc.src = './timeline.js'; sc.onload = ok; sc.onerror = () => bad(new Error('timeline.js')); document.head.appendChild(sc); })
-    ]).then(([n, a]) => { tl = window.NightlyTimeline.mount(timeline, n, a); })
-      .catch(e => { timeline.innerHTML = '<div id="boot">Could not load the timeline: ' + String(e.message || e) + '.</div>'; })
-      .finally(() => { tlLoading = false; });
+  // timeline.js and nightdetail.js: each loads once, into its own container
+  const MODS = {
+    timeline: { el: document.getElementById('timeline'), src: './timeline.js', global: 'NightlyTimeline', inst: null, loading: false },
+    night: { el: document.getElementById('night'), src: './nightdetail.js', global: 'NightDetail', inst: null, loading: false }
+  };
+  let dataP = null;
+  const loadData = () => dataP || (dataP = Promise.all([
+    fetch(DATA_URL).then(r => { if (!r.ok) throw new Error('nights.json HTTP ' + r.status); return r.json(); }),
+    fetch(APNEA_URL).then(r => { if (!r.ok) throw new Error('apnea.json HTTP ' + r.status); return r.json(); })
+  ]).catch(e => { dataP = null; throw e; }));
+  function showMod(name) {
+    const m = MODS[name];
+    if (m.inst) { m.inst.redraw(); return; }
+    if (m.loading) return;
+    m.loading = true;
+    m.el.innerHTML = '<div id="boot">Loading…</div>';
+    Promise.all([loadData(), new Promise((ok, bad) => { const sc = document.createElement('script'); sc.src = m.src; sc.onload = ok; sc.onerror = () => bad(new Error(m.src)); document.head.appendChild(sc); })])
+      .then(([[n, a]]) => { m.inst = window[m.global].mount(m.el, n, a); })
+      .catch(e => { m.el.innerHTML = '<div id="boot">Could not load this view: ' + String(e.message || e) + '. Run scripts/build_apnea.py.</div>'; })
+      .finally(() => { m.loading = false; });
   }
   function route() {
-    const v = BREATH[location.hash.slice(1)] ? location.hash.slice(1) : 'sleep';
+    const h = location.hash.slice(1);
+    const v = (BREATH[h] || MODS[h]) ? h : 'sleep';
     current = v;
     document.querySelectorAll('#views a').forEach(a => { if (a.dataset.view === v) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
     root.hidden = v !== 'sleep';
-    analysis.hidden = v === 'sleep';
-    timeline.hidden = v !== 'sleep';
-    if (v === 'sleep') { if (tl) tl.redraw(); else loadTimeline(); return; }
+    analysis.hidden = !BREATH[v];
+    Object.keys(MODS).forEach(k => { MODS[k].el.hidden = k !== v; });
+    if (MODS[v]) { showMod(v); return; }
+    if (!BREATH[v]) return;
     if (views) { views.show(BREATH[v]); return; }
     if (loading) return;
     loading = true;
@@ -177,7 +189,10 @@ body{margin:0;background:#F1F2F4;font-family:'IBM Plex Sans',system-ui,sans-seri
       .finally(() => { loading = false; });
   }
   addEventListener('hashchange', route);
-  let rt; addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { if (views && current !== 'sleep') views.redraw(BREATH[current]); if (tl && current === 'sleep') tl.redraw(); }, 150); });
+  let rt; addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => {
+    if (views && BREATH[current]) views.redraw(BREATH[current]);
+    if (MODS[current] && MODS[current].inst) MODS[current].inst.redraw();
+  }, 150); });
   route();
 
   fetch(ARTBOARD)
