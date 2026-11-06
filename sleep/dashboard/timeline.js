@@ -1,9 +1,9 @@
-// Nightly timeline with CPAP + O2 ring, shown on the sleep report under the artboard.
+// Nightly timeline with CPAP + O2 ring: the "Timeline + breathing" tab (#timeline).
 //   A · on the sleep bar   mask-on rail, event lines and the SpO2 trace drawn over each night's bar
 //   B · extra column       a slim breathing column next to each night's bar, on the same clock
 // Drag a box to zoom into a time range (all nights stay, or only the nights in the box).
 // The CPAP / O2 ring checkboxes gray out timeline nights and calendar days that lack that data.
-// index.html calls NightlyTimeline.mount(root, nightsJson, apneaJson) once, then .redraw() on resize.
+// index.html calls NightlyTimeline.mount(root, nightsJson, apneaJson) once, then .redraw() when shown or resized.
 (function () {
   const STYLE = `
 .tl{--bg:#F1F2F4;--card:#FFFFFF;--line:#D9DCE1;--grid:#EEF0F3;--ink:#111418;--ink2:#3D4350;--muted:#5A6170;--accent:#2459C6;
