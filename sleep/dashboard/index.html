@@ -13,6 +13,7 @@ body{margin:0;background:#F1F2F4;font-family:'IBM Plex Sans',system-ui,sans-seri
 #views a[aria-current="page"]{background:#111418;color:#fff}
 #views a:focus-visible{outline:2px solid #2459C6;outline-offset:2px}
 #analysis{max-width:1440px;margin:0 auto;padding:28px 24px 48px}
+#timeline{max-width:1440px;margin:0 auto;padding:0 24px 48px}
 </style>
 </head>
 <body>
@@ -23,6 +24,7 @@ body{margin:0;background:#F1F2F4;font-family:'IBM Plex Sans',system-ui,sans-seri
   <a href="#breathing" data-view="breathing">Breathing analysis</a>
 </nav>
 <div id="root"><div id="boot">Loading dashboard…</div></div>
+<div id="timeline" hidden></div>
 <div id="analysis" hidden><div id="boot">Loading breathing data…</div></div>
 <script>
 // Renders a canvas artboard (.dc.html) as a plain page: the same markup and
@@ -139,14 +141,30 @@ body{margin:0;background:#F1F2F4;font-family:'IBM Plex Sans',system-ui,sans-seri
   // views: the sleep report (artboard) and the breathing views (breathing.js: a · b · c)
   const BREATH = { cpap: 'a', overlay: 'b', breathing: 'c' };
   const analysis = document.getElementById('analysis');
+  const timeline = document.getElementById('timeline');
   let views = null, loading = false, current = 'sleep';
+  // nightly timeline + CPAP / O2 ring (timeline.js), under the sleep report
+  let tl = null, tlLoading = false;
+  function loadTimeline() {
+    if (tl || tlLoading) return;
+    tlLoading = true;
+    timeline.innerHTML = '<div id="boot">Loading timeline…</div>';
+    Promise.all([
+      fetch(DATA_URL).then(r => { if (!r.ok) throw new Error('nights.json HTTP ' + r.status); return r.json(); }),
+      fetch(APNEA_URL).then(r => { if (!r.ok) throw new Error('apnea.json HTTP ' + r.status); return r.json(); }),
+      new Promise((ok, bad) => { const sc = document.createElement('script'); sc.src = './timeline.js'; sc.onload = ok; sc.onerror = () => bad(new Error('timeline.js')); document.head.appendChild(sc); })
+    ]).then(([n, a]) => { tl = window.NightlyTimeline.mount(timeline, n, a); })
+      .catch(e => { timeline.innerHTML = '<div id="boot">Could not load the timeline: ' + String(e.message || e) + '.</div>'; })
+      .finally(() => { tlLoading = false; });
+  }
   function route() {
     const v = BREATH[location.hash.slice(1)] ? location.hash.slice(1) : 'sleep';
     current = v;
     document.querySelectorAll('#views a').forEach(a => { if (a.dataset.view === v) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
     root.hidden = v !== 'sleep';
     analysis.hidden = v === 'sleep';
-    if (v === 'sleep') return;
+    timeline.hidden = v !== 'sleep';
+    if (v === 'sleep') { if (tl) tl.redraw(); else loadTimeline(); return; }
     if (views) { views.show(BREATH[v]); return; }
     if (loading) return;
     loading = true;
@@ -159,7 +177,7 @@ body{margin:0;background:#F1F2F4;font-family:'IBM Plex Sans',system-ui,sans-seri
       .finally(() => { loading = false; });
   }
   addEventListener('hashchange', route);
-  let rt; addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { if (views && current !== 'sleep') views.redraw(BREATH[current]); }, 150); });
+  let rt; addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { if (views && current !== 'sleep') views.redraw(BREATH[current]); if (tl && current === 'sleep') tl.redraw(); }, 150); });
   route();
 
   fetch(ARTBOARD)
