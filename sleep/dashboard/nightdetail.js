@@ -6,7 +6,7 @@
 (function () {
   const STYLE = `
 .nd{--card:#FFFFFF;--line:#D9DCE1;--grid:#EEF0F3;--ink:#111418;--ink2:#3D4350;--muted:#5A6170;--accent:#2459C6;
-  --deep:#1F7A3D;--core:#3C69D9;--rem:#8FC3F2;--awake:#EC8546;--bed:#C9CED6;
+  --deep:#F5D04A;--core:#3C69D9;--rem:#8FC3F2;--awake:#EC8546;--bed:#C9CED6;
   --ca:#7C4DDB;--oa:#D13B52;--h:#E08A1E;--ua:#6B7486;--ar:#2E9C8A;
   --spo2:#2C7BC9;--pulse:#D9468F;--press:#3E8E5C;--leak:#C98A0E;--flim:#7C4DDB;--snore:#6B7486;
   --t-blue:#E8F0FD;--t-green:#E6F4EC;--t-amber:#FBF1DC;--t-pink:#FBE8F1;--t-violet:#EFEAFB;--t-red:#FBE6E9;
