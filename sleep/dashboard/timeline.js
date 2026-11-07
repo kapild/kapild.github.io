@@ -7,7 +7,7 @@
 (function () {
   const STYLE = `
 .tl{--bg:#F1F2F4;--card:#FFFFFF;--line:#D9DCE1;--grid:#EEF0F3;--ink:#111418;--ink2:#3D4350;--muted:#5A6170;--accent:#2459C6;
-  --deep:#3F33A8;--core:#3C69D9;--rem:#8FC3F2;--awake:#EC8546;--hatch:#B4BAC4;
+  --deep:#1F7A3D;--core:#3C69D9;--rem:#8FC3F2;--awake:#EC8546;--hatch:#B4BAC4;
   --mask:#E9B730;--maskbg:rgba(233,183,48,.22);--spo2:#C7304A;
   --ev-oa:#C7304A;--ev-ca:#111418;--ev-h:#EC8546;--ev-ua:#7C8597;
   --gray:#E6E8EC;--grayfg:#A3A9B4;--hl:rgba(36,89,198,.08);--mono:'IBM Plex Mono',ui-monospace,monospace;

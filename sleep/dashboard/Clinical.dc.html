@@ -262,10 +262,10 @@ button:focus-visible,select:focus-visible{outline:2px solid #2459C6;outline-offs
                     <span style="display: grid; place-items: center; align-self: center; width: {{ringPx}}px; max-width: 100%">
                       <sc-if value="{{kind3}}" hint-placeholder-val="{{ true }}">
                         <svg viewBox="0 0 48 48" aria-hidden="true" style="grid-area: 1 / 1; width: 100%; height: auto; aspect-ratio: 1 / 1">
-                          <circle cx="24" cy="24" r="20" fill="none" stroke="#D5EEEA" stroke-width="4.5"></circle>
-                          <circle cx="24" cy="24" r="20" fill="none" stroke="#2E9C8A" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="{{c.r1}}" transform="rotate(-90 24 24)"></circle>
-                          <circle cx="24" cy="24" r="14.5" fill="none" stroke="#E1DEF8" stroke-width="4.5"></circle>
-                          <circle cx="24" cy="24" r="14.5" fill="none" stroke="#3F33A8" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="{{c.r2}}" transform="rotate(-90 24 24)"></circle>
+                          <circle cx="24" cy="24" r="20" fill="none" stroke="#E1DEF8" stroke-width="4.5"></circle>
+                          <circle cx="24" cy="24" r="20" fill="none" stroke="#3F33A8" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="{{c.r1}}" transform="rotate(-90 24 24)"></circle>
+                          <circle cx="24" cy="24" r="14.5" fill="none" stroke="#DCEFE2" stroke-width="4.5"></circle>
+                          <circle cx="24" cy="24" r="14.5" fill="none" stroke="#1F7A3D" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="{{c.r2}}" transform="rotate(-90 24 24)"></circle>
                           <circle cx="24" cy="24" r="9" fill="none" stroke="#D8EAF7" stroke-width="4.5"></circle>
                           <circle cx="24" cy="24" r="9" fill="none" stroke="#2E86C9" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="{{c.r3}}" transform="rotate(-90 24 24)"></circle>
                         </svg>
@@ -290,7 +290,7 @@ button:focus-visible,select:focus-visible{outline:2px solid #2459C6;outline-offs
                     </span>
                     <sc-if value="{{kind3}}" hint-placeholder-val="{{ true }}">
                       <span style="display: flex; justify-content: center; gap: 3px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: -0.03em; white-space: nowrap">
-                        <span style="color: #1F7466">{{c.p1}}</span><span style="color: #3F33A8">{{c.p2}}</span><span style="color: #1F6FAE">{{c.p3}}</span>
+                        <span style="color: #3F33A8">{{c.p1}}</span><span style="color: #1F7A3D">{{c.p2}}</span><span style="color: #1F6FAE">{{c.p3}}</span>
                       </span>
                     </sc-if>
                     <sc-if value="{{notKind3}}" hint-placeholder-val="{{ false }}">
@@ -510,10 +510,10 @@ button:focus-visible,select:focus-visible{outline:2px solid #2459C6;outline-offs
     <div style="flex: 1 1 340px; min-width: 0; display: flex; flex-direction: column; gap: 18px">
       <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 18px">
         <svg width="128" height="128" viewBox="0 0 48 48" role="img" aria-label="{{nv.ringAria}}" style="flex: none">
-          <circle cx="24" cy="24" r="20" fill="none" stroke="#D5EEEA" stroke-width="4.5"></circle>
-          <circle cx="24" cy="24" r="20" fill="none" stroke="#2E9C8A" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="{{nv.r1}}" transform="rotate(-90 24 24)"></circle>
-          <circle cx="24" cy="24" r="14.5" fill="none" stroke="#E1DEF8" stroke-width="4.5"></circle>
-          <circle cx="24" cy="24" r="14.5" fill="none" stroke="#3F33A8" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="{{nv.r2}}" transform="rotate(-90 24 24)"></circle>
+          <circle cx="24" cy="24" r="20" fill="none" stroke="#E1DEF8" stroke-width="4.5"></circle>
+          <circle cx="24" cy="24" r="20" fill="none" stroke="#3F33A8" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="{{nv.r1}}" transform="rotate(-90 24 24)"></circle>
+          <circle cx="24" cy="24" r="14.5" fill="none" stroke="#DCEFE2" stroke-width="4.5"></circle>
+          <circle cx="24" cy="24" r="14.5" fill="none" stroke="#1F7A3D" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="{{nv.r2}}" transform="rotate(-90 24 24)"></circle>
           <circle cx="24" cy="24" r="9" fill="none" stroke="#D8EAF7" stroke-width="4.5"></circle>
           <circle cx="24" cy="24" r="9" fill="none" stroke="#2E86C9" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="{{nv.r3}}" transform="rotate(-90 24 24)"></circle>
         </svg>
@@ -673,8 +673,8 @@ class Component extends DCLogic {
   dash(p, C) { return (Math.max(0.001, Math.min(1, p)) * C).toFixed(2) + ' 999'; }
   pal() {
     return {
-      stage: { deep: '#3F33A8', core: '#3C69D9', rem: '#8FC3F2', awake: '#EC8546', bed: 'repeating-linear-gradient(135deg, #A9B1BF 0px, #A9B1BF 1.5px, #E6E9EF 1.5px, #E6E9EF 4.5px)' },
-      share: { bed: '#C9CED6', deep: '#3F33A8', core: '#3C69D9', rem: '#7DB9EE', awake: '#EC8546' },
+      stage: { deep: '#1F7A3D', core: '#3C69D9', rem: '#8FC3F2', awake: '#EC8546', bed: 'repeating-linear-gradient(135deg, #A9B1BF 0px, #A9B1BF 1.5px, #E6E9EF 1.5px, #E6E9EF 4.5px)' },
+      share: { bed: '#C9CED6', deep: '#1F7A3D', core: '#3C69D9', rem: '#7DB9EE', awake: '#EC8546' },
       effPal: ['#E3ECFB', '#BBD0F5', '#86ABEC', '#3C69D9', '#2B4FB8'],
       line: '#EEF0F3', lineStrong: '#B4BAC4', good: '#2459C6', bad: '#B45314', muted: '#5A6170', none: '#EEF0F3'
     };
@@ -682,9 +682,9 @@ class Component extends DCLogic {
   miniMetrics() {
     const self = this;
     return {
-      deep: { label: 'Deep sleep', get: n => n.deep, fmt: v => self.dur(v), edges: [45, 60, 75, 90], pal: ['#ECEAFB', '#CBC6F3', '#9F96E8', '#6A5ED6', '#3F33A8'], legend: ['<45m', '45–60m', '60–75m', '75–90m', '≥90m'], lo: 'Less', hi: 'More' },
+      deep: { label: 'Deep sleep', get: n => n.deep, fmt: v => self.dur(v), edges: [45, 60, 75, 90], pal: ['#E4F3E8', '#BFE3C8', '#86C79A', '#469E5F', '#1F7A3D'], legend: ['<45m', '45–60m', '60–75m', '75–90m', '≥90m'], lo: 'Less', hi: 'More' },
       awake: { label: 'Awake time', get: n => n.awake, fmt: v => Math.round(v) + 'm', edges: [10, 20, 30, 45], pal: ['#FDEEE3', '#F9D2B5', '#F4AE7D', '#EC8546', '#B45314'], legend: ['<10m', '10–20m', '20–30m', '30–45m', '≥45m'], lo: 'Less', hi: 'More' },
-      total: { label: 'Total sleep', get: n => n.asleep, fmt: v => self.dur(v), edges: [360, 390, 420, 450], pal: ['#E0F2EF', '#B3E0D8', '#7CC7BA', '#2E9C8A', '#1F7466'], legend: ['<6h', '6–6.5h', '6.5–7h', '7–7.5h', '≥7.5h'], lo: 'Shorter', hi: 'Longer' }
+      total: { label: 'Total sleep', get: n => n.asleep, fmt: v => self.dur(v), edges: [360, 390, 420, 450], pal: ['#ECEAFB', '#CBC6F3', '#9F96E8', '#6A5ED6', '#3F33A8'], legend: ['<6h', '6–6.5h', '6.5–7h', '7–7.5h', '≥7.5h'], lo: 'Shorter', hi: 'Longer' }
     };
   }
   avg(a, f) {
@@ -865,8 +865,8 @@ class Component extends DCLogic {
     const gS = g.total * 60;
     const SM = {
       eff: { c: '#3C69D9', t: '#DCE6FA', p: n => n.eff / 100, center: n => n.eff + '%', l1: n => self.dur(n.asleep), l2: n => '/ ' + self.dur(n.inBedDur) },
-      total: { c: '#2E9C8A', t: '#D5EEEA', p: n => n.asleep / gS, center: n => pc(n.asleep / gS) + '%', l1: n => self.dur(n.asleep), l2: () => 'of ' + self.gt(gS) },
-      deep: { c: '#3F33A8', t: '#E1DEF8', p: n => (n.deep || 0) / g.deep, center: n => n.staged ? pc(n.deep / g.deep) + '%' : '—', l1: n => self.dur(n.deep), l2: n => n.staged ? 'of ' + self.gt(g.deep) : 'no stages' },
+      total: { c: '#3F33A8', t: '#E1DEF8', p: n => n.asleep / gS, center: n => pc(n.asleep / gS) + '%', l1: n => self.dur(n.asleep), l2: () => 'of ' + self.gt(gS) },
+      deep: { c: '#1F7A3D', t: '#DCEFE2', p: n => (n.deep || 0) / g.deep, center: n => n.staged ? pc(n.deep / g.deep) + '%' : '—', l1: n => self.dur(n.deep), l2: n => n.staged ? 'of ' + self.gt(g.deep) : 'no stages' },
       rem: { c: '#2E86C9', t: '#D8EAF7', p: n => (n.rem || 0) / g.rem, center: n => n.staged ? pc(n.rem / g.rem) + '%' : '—', l1: n => self.dur(n.rem), l2: n => n.staged ? 'of ' + self.gt(g.rem) : 'no stages' },
       awake: { c: '#D9702F', t: '#FBE3D3', p: n => n.awake / 60, center: n => n.awake + 'm', l1: n => pc(n.awake / n.inBedDur) + '%', l2: () => 'of night' }
     };
@@ -905,7 +905,7 @@ class Component extends DCLogic {
     }) }));
     let calLegend = [], legendNote = '';
     if (kind === 'three') {
-      calLegend = [{ c: '#2E9C8A', l: 'Outer · total sleep, goal ' + this.gt(gS) }, { c: '#3F33A8', l: 'Middle · deep, goal ' + this.gt(g.deep) }, { c: '#2E86C9', l: 'Inner · REM, goal ' + this.gt(g.rem) }];
+      calLegend = [{ c: '#3F33A8', l: 'Outer · total sleep, goal ' + this.gt(gS) }, { c: '#1F7A3D', l: 'Middle · deep, goal ' + this.gt(g.deep) }, { c: '#2E86C9', l: 'Inner · REM, goal ' + this.gt(g.rem) }];
       legendNote = 'Numbers under each ring: % of each goal (sleep · deep · REM). A closed ring means the goal was met. – means no stage data (before 2023).';
     } else if (kind === 'share') {
       calLegend = [{ c: P.share.bed, l: 'Falling asleep' }, { c: P.share.deep, l: 'Deep' }, { c: P.share.core, l: 'Core' }, { c: P.share.rem, l: 'REM' }, { c: P.share.awake, l: 'Awake' }];
@@ -1025,7 +1025,7 @@ class Component extends DCLogic {
     const setSel = i => self.setState(single ? { sel: i, off: N - 1 - i, hi: -1, hs: -1 } : { sel: i });
     const ps = sn.asleep / gS, pd = (sn.deep || 0) / g.deep, pr = (sn.rem || 0) / g.rem;
     const pcs = p => Math.round(p * 100) + '%';
-    const tc = p => p >= 1 ? '#1F7466' : '#5A6170';
+    const tc = p => p >= 1 ? '#3F33A8' : '#5A6170';
     const isLatest = sel === N - 1 && pIdx === 0;
     const nv = Object.assign(this.nightView(sn), {
       eyebrow: isLatest ? 'LATEST NIGHT' : 'SELECTED NIGHT', date: sn.label + ', ' + sn.yr, sub: sn.nightOf, notLast: sel !== N - 1,
@@ -1036,8 +1036,8 @@ class Component extends DCLogic {
       r1: this.dash(ps, 2 * Math.PI * 20), r2: this.dash(pd, 2 * Math.PI * 14.5), r3: this.dash(pr, 2 * Math.PI * 9),
       ringAria: sn.staged ? 'Goal rings: total sleep ' + pcs(ps) + ', deep ' + pcs(pd) + ', REM ' + pcs(pr) + ' of goal' : 'Goal ring: total sleep ' + pcs(ps) + ' of goal; no stage data',
       goals: [
-        { c: '#2E9C8A', l: 'Total sleep', v: this.dur(sn.asleep), p: pcs(ps) + ' of ' + this.gt(gS), tc: tc(ps) },
-        { c: '#3F33A8', l: 'Deep', v: this.dur(sn.deep), p: sn.staged ? pcs(pd) + ' of ' + this.gt(g.deep) : 'no stage data', tc: sn.staged ? tc(pd) : '#5A6170' },
+        { c: '#3F33A8', l: 'Total sleep', v: this.dur(sn.asleep), p: pcs(ps) + ' of ' + this.gt(gS), tc: tc(ps) },
+        { c: '#1F7A3D', l: 'Deep', v: this.dur(sn.deep), p: sn.staged ? pcs(pd) + ' of ' + this.gt(g.deep) : 'no stage data', tc: sn.staged ? tc(pd) : '#5A6170' },
         { c: '#2E86C9', l: 'REM', v: this.dur(sn.rem), p: sn.staged ? pcs(pr) + ' of ' + this.gt(g.rem) : 'no stage data', tc: sn.staged ? tc(pr) : '#5A6170' }
       ]
     });
