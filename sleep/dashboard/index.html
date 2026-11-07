@@ -38,6 +38,8 @@ body{margin:0;background:#F1F2F4;font-family:'IBM Plex Sans',system-ui,sans-seri
   const ARTBOARD = './Clinical.dc.html';
   const DATA_URL = '../data/nights.json';
   const APNEA_URL = '../data/apnea.json';
+  // ask the server every time (a 304 when unchanged), so a rebuilt nights.json shows on a plain reload
+  const NO_CACHE = { cache: 'no-cache' };
   const EV = { onclick: 'click', onmouseenter: 'mouseenter', onmouseleave: 'mouseleave', onchange: 'change', oninput: 'input' };
   const WHOLE = /^\s*\{\{\s*([^}]+?)\s*\}\}\s*$/, HOLE = /\{\{\s*([^}]+?)\s*\}\}/g;
   const root = document.getElementById('root');
@@ -153,8 +155,8 @@ body{margin:0;background:#F1F2F4;font-family:'IBM Plex Sans',system-ui,sans-seri
   };
   let dataP = null;
   const loadData = () => dataP || (dataP = Promise.all([
-    fetch(DATA_URL).then(r => { if (!r.ok) throw new Error('nights.json HTTP ' + r.status); return r.json(); }),
-    fetch(APNEA_URL).then(r => { if (!r.ok) throw new Error('apnea.json HTTP ' + r.status); return r.json(); })
+    fetch(DATA_URL, NO_CACHE).then(r => { if (!r.ok) throw new Error('nights.json HTTP ' + r.status); return r.json(); }),
+    fetch(APNEA_URL, NO_CACHE).then(r => { if (!r.ok) throw new Error('apnea.json HTTP ' + r.status); return r.json(); })
   ]).catch(e => { dataP = null; throw e; }));
   function showMod(name) {
     const m = MODS[name];
@@ -181,8 +183,8 @@ body{margin:0;background:#F1F2F4;font-family:'IBM Plex Sans',system-ui,sans-seri
     if (loading) return;
     loading = true;
     Promise.all([
-      fetch(APNEA_URL).then(r => { if (!r.ok) throw new Error('apnea.json HTTP ' + r.status); return r.json(); }),
-      fetch(DATA_URL).then(r => r.json()),
+      fetch(APNEA_URL, NO_CACHE).then(r => { if (!r.ok) throw new Error('apnea.json HTTP ' + r.status); return r.json(); }),
+      fetch(DATA_URL, NO_CACHE).then(r => r.json()),
       new Promise((ok, bad) => { const sc = document.createElement('script'); sc.src = './breathing.js'; sc.onload = ok; sc.onerror = () => bad(new Error('breathing.js')); document.head.appendChild(sc); })
     ]).then(([a, n]) => { views = window.BreathingViews.mount(analysis, a, n); route(); })
       .catch(e => { analysis.innerHTML = '<div id="boot">Could not load breathing data: ' + String(e.message || e) + '. Run scripts/build_apnea.py.</div>'; })
