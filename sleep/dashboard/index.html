@@ -13,12 +13,13 @@ body{margin:0;background:#F1F2F4;font-family:'IBM Plex Sans',system-ui,sans-seri
 #views a[aria-current="page"]{background:#111418;color:#fff}
 #views a:focus-visible{outline:2px solid #2459C6;outline-offset:2px}
 #analysis{max-width:1440px;margin:0 auto;padding:28px 24px 48px}
-#timeline,#night{max-width:1440px;margin:0 auto;padding:28px 24px 48px}
+#timeline,#night,#habits{max-width:1440px;margin:0 auto;padding:28px 24px 48px}
 </style>
 </head>
 <body>
 <nav id="views" aria-label="View">
   <a href="#sleep" data-view="sleep">Sleep report</a>
+  <a href="#habits" data-view="habits">Sleep habits</a>
   <a href="#night" data-view="night">Night detail</a>
   <a href="#timeline" data-view="timeline">Timeline + breathing</a>
   <a href="#cpap" data-view="cpap">CPAP &amp; oxygen</a>
@@ -28,6 +29,7 @@ body{margin:0;background:#F1F2F4;font-family:'IBM Plex Sans',system-ui,sans-seri
 <div id="root"><div id="boot">Loading dashboard…</div></div>
 <div id="timeline" hidden></div>
 <div id="night" hidden></div>
+<div id="habits" hidden></div>
 <div id="analysis" hidden><div id="boot">Loading breathing data…</div></div>
 <script>
 // Renders a canvas artboard (.dc.html) as a plain page: the same markup and
@@ -148,10 +150,11 @@ body{margin:0;background:#F1F2F4;font-family:'IBM Plex Sans',system-ui,sans-seri
   const BREATH = { cpap: 'a', overlay: 'b', breathing: 'c' };
   const analysis = document.getElementById('analysis');
   let views = null, loading = false, current = 'sleep';
-  // timeline.js and nightdetail.js: each loads once, into its own container
+  // timeline.js, nightdetail.js and habits.js: each loads once, into its own container
   const MODS = {
     timeline: { el: document.getElementById('timeline'), src: './timeline.js', global: 'NightlyTimeline', inst: null, loading: false },
-    night: { el: document.getElementById('night'), src: './nightdetail.js', global: 'NightDetail', inst: null, loading: false }
+    night: { el: document.getElementById('night'), src: './nightdetail.js', global: 'NightDetail', inst: null, loading: false },
+    habits: { el: document.getElementById('habits'), src: './habits.js', global: 'SleepHabits', inst: null, loading: false }
   };
   let dataP = null;
   const loadData = () => dataP || (dataP = Promise.all([
