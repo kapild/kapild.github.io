@@ -1,14 +1,15 @@
 // Sleep habits: the "Sleep habits" tab (#habits). Long-term patterns across every night.
 //   summary cards · nightly trend · sleep window · bedtime / wake heatmaps · sleep debt · month over month
 //   · bedtime consistency · deep + REM by month · weekday rhythm · year over year · CPAP vs other nights
-//   · calendar of every night. Dashed lines on the trend charts mark US daylight-saving switches.
+//   · long awakenings (how long you sleep before the first long wake) · wake heatmaps (clock time / sleep
+//   before vs minutes awake) · calendar heatmap colored by a chosen measure (red = rough night, green = good). Dashed lines on the trend charts mark US daylight-saving switches.
 // index.html calls SleepHabits.mount(root, nightsJson, apneaJson) once, then .redraw() when shown or resized.
 (function () {
   const STYLE = `
 .hb{--card:#FFFFFF;--line:#D9DCE1;--grid:#EEF0F3;--ink:#111418;--ink2:#3D4350;--muted:#5A6170;--accent:#2459C6;
   --sleep:#3C69D9;--bed:#3F33A8;--wake:#E08A1E;--good:#2E8B57;--bad:#C2410C;--goal:#E6F4EC;--debt:#C2410C;--debtbg:#FBE6DC;
-  --deep:#D9A90F;--deeptext:#8A6700;--rem:#7DB9EE;--dst:#9AA1AD;
-  --h0:#F3F4F8;--h1:#DCE5F9;--h2:#AFC4F1;--h3:#7097E6;--h4:#3C69D9;--h5:#22408F;
+  --wakewin:#EC8546;--after:#AFC4F1;--nowake:#D5DCEA;--deep:#D9A90F;--deeptext:#8A6700;--rem:#7DB9EE;--dst:#9AA1AD;
+  --empty:#F4F5F7;--monthline:#111418;--h0:#F3F4F8;--h1:#DCE5F9;--h2:#AFC4F1;--h3:#7097E6;--h4:#3C69D9;--h5:#22408F;
   --mono:'IBM Plex Mono',ui-monospace,monospace;
   font-family:'IBM Plex Sans',system-ui,sans-serif;font-size:14px;color:var(--ink);display:flex;flex-direction:column;gap:14px}
 .hb .card{background:var(--card);border:1px solid var(--line);border-radius:4px;padding:16px 18px;min-width:0}
@@ -44,6 +45,10 @@
 .hb th:first-child,.hb td:first-child{text-align:left}
 .hb .bar{display:inline-block;height:8px;border-radius:2px;background:var(--sleep);vertical-align:middle;margin-right:6px}
 .hb .find{font-size:16px;font-weight:600;line-height:1.4;margin:6px 0 0;max-width:72ch}
+.hb .wleg i{display:inline-block;width:12px;height:12px;border-radius:2px}
+.hb .chart svg.fixed{width:auto;max-width:none}
+.hb .ckey{display:inline-flex;align-items:center;gap:4px}
+.hb .ckey i{display:inline-block;width:14px;height:14px;border-radius:2px}
 .hb .note{font-size:12.5px;line-height:1.5;color:var(--muted);margin:8px 0 0;max-width:80ch}
 .hb-tip{position:fixed;pointer-events:none;background:#fff;color:#111418;border:1px solid #111418;border-radius:4px;padding:6px 9px;font:12px/1.45 'IBM Plex Mono',monospace;display:none;z-index:30;max-width:260px;box-shadow:4px 4px 0 rgba(17,20,24,.12)}
 .hb [hidden]{display:none!important}`;
@@ -101,6 +106,56 @@
   <p class="find" id="hb-debt-find"></p>
   <div class="chart" id="hb-debt"></div>
 </section>
+<section class="card" aria-label="Long awakenings">
+  <div class="head">
+    <div><h2>Waking up in the night</h2><div class="sub">how long you sleep before the first long awake stretch, how long it lasts, and how much sleep comes after</div></div>
+    <div class="seg sm" role="group" aria-label="What counts as a long wake">
+      <button type="button" data-w="15">15 min+</button>
+      <button type="button" data-w="20" aria-pressed="true">20 min+</button>
+      <button type="button" data-w="30">30 min+</button>
+    </div>
+  </div>
+  <p class="find" id="hb-wk-find"></p>
+  <section class="tiles" id="hb-wk-tiles" style="margin-top:10px"></section>
+  <div class="legend" style="margin-top:12px"><span><i class="sw" style="background:var(--sleep)"></i>first stretch of sleep</span><span><i class="sw" style="background:var(--wakewin)"></i>first long wake</span><span><i class="sw" style="background:var(--after)"></i>after it</span><span><i class="sw" style="background:var(--nowake)"></i>night with no long wake</span><span><i class="sw" style="height:3px;background:var(--bed)"></i>14-night median of the first stretch</span></div>
+  <div class="sub" style="margin-top:4px">each bar is one night, measured in hours from falling asleep (top) downwards</div>
+  <div class="chart" id="hb-wk-bars"></div>
+  <div class="two" style="margin-top:6px">
+    <div><h2 style="font-size:13px">How long the first stretch lasts</h2><div class="sub">nights with a long wake · sleep before it, in half-hour bins</div><div class="chart" id="hb-wk-hist"></div></div>
+    <div><h2 style="font-size:13px">When the first long wake starts</h2><div class="sub">clock time, half-hour bins · bar label = median minutes awake</div><div class="chart" id="hb-wk-clock"></div></div>
+  </div>
+  <p class="note">A long wake is any stretch of at least the chosen length between two periods of sleep: awake, in bed but not asleep, or a gap with no sleep data. The last wake of the morning doesn't count. The Pixel Watch reports far fewer long wakes than the Apple Watch did, partly because the two watches record being awake differently, so compare nights from the same watch. Short wake-ups inside the first stretch are left in it, so the first stretch is the time from falling asleep to the long wake, and "slept" is the sleep inside it.</p>
+</section>
+<section class="card" aria-label="Wake heatmaps">
+  <div class="head">
+    <div><h2>When you wake, and for how long</h2><div class="sub">every awake stretch between two periods of sleep · darker red = more wakes</div></div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px">
+      <div class="seg sm" role="group" aria-label="Heatmap window">
+        <button type="button" data-hw="30">1 month</button>
+        <button type="button" data-hw="91">Quarter</button>
+        <button type="button" data-hw="182">6 months</button>
+        <button type="button" data-hw="365" aria-pressed="true">1 year</button>
+      </div>
+      <div class="seg sm" role="group" aria-label="Which wakes to count">
+        <button type="button" data-hk="all" aria-pressed="true">Every wake 5 min+</button>
+        <button type="button" data-hk="first">First long wake 20 min+</button>
+      </div>
+      <div class="seg sm" role="group" aria-label="Which watch">
+        <button type="button" data-hs="both" aria-pressed="true">Both</button>
+        <button type="button" data-hs="apple">Apple</button>
+        <button type="button" data-hs="google">Pixel</button>
+      </div>
+      <div class="seg sm" role="group" aria-label="Move window"><button type="button" id="hb-wh-prev" aria-label="Earlier window">‹</button><button type="button" id="hb-wh-next" aria-label="Later window">›</button></div>
+    </div>
+  </div>
+  <div class="sub" id="hb-wh-cover" style="margin-top:6px"></div>
+  <p class="find" id="hb-wh-find"></p>
+  <div class="two" style="margin-top:6px">
+    <div><h2 style="font-size:13px">What time you wake vs how long you stay awake</h2><div class="sub">across = clock time the wake starts · down = minutes awake</div><div class="chart" id="hb-wh1"></div></div>
+    <div><h2 style="font-size:13px">How long you'd slept vs how long you stay awake</h2><div class="sub">across = hours since falling asleep · down = minutes awake</div><div class="chart" id="hb-wh2"></div></div>
+  </div>
+  <p class="note">Each square counts the wakes in the window that started at that time (left) or after that much sleep (right) and lasted that long. The bold line marks 20 minutes. Bars on the edges total each row and column. Hover a square for its count and the latest examples. The final wake of the morning isn't counted.</p>
+</section>
 <section class="card" aria-label="Month over month">
   <div class="head">
     <div><h2>Month over month</h2><div class="sub">averages per month · arrows compare with the month before (minutes)</div></div>
@@ -149,9 +204,10 @@
 </section>
 <section class="card" aria-label="Calendar heatmap">
   <div class="head">
-    <div><h2>Every night at a glance</h2><div class="sub">one square per night · color = hours asleep · pale = no data</div></div>
-    <div class="legend"><span class="ramp"><i style="background:var(--h1)"></i><i style="background:var(--h2)"></i><i style="background:var(--h3)"></i><i style="background:var(--h4)"></i><i style="background:var(--h5)"></i></span><span>&lt;5 h · 5–6 · 6–7 · 7–8 · 8 h+</span></div>
+    <div><h2>Every night at a glance</h2><div class="sub">one square per night · thick lines mark months · green = good night, red = rough night · faded = outside the range</div></div>
+    <div class="seg sm" role="group" aria-label="Calendar measure" id="hb-cal-metrics"></div>
   </div>
+  <div class="legend" id="hb-cal-leg" style="margin-top:8px"></div>
   <div class="chart" id="hb-cal"></div>
 </section>`;
 
@@ -170,6 +226,8 @@
   // usual bedtime / wake ranges; naps and all-nighters stay in the counts but not in the time averages
   const ON_OK = m => m >= -120 && m <= 420, WK_OK = m => m >= 360 && m <= 960;
   // US daylight-saving switches: second Sunday of March, first Sunday of November
+  // red → yellow → green, low → high
+  const RDYLGN = ['#D73027', '#FC8D59', '#FEE08B', '#D9EF8B', '#91CF60', '#1A9850'];
   const nthSunday = (y, mo, k) => { const d = new Date(Date.UTC(y, mo, 1)); const first = (7 - d.getUTCDay()) % 7 + 1; return Date.UTC(y, mo, first + 7 * (k - 1), 12); };
 
   function mount(root, NJ, A) {
@@ -187,13 +245,47 @@
 
     const N = (NJ.nights || []).map(x => ({
       d: x.d, on: x.onset, wk: x.wake, a: (x.deep || 0) + (x.rem || 0) + (x.core || 0), deep: x.deep || null, rem: x.rem || null,
-      aw: x.awake || 0, wu: x.wakeups, g: x.src === 'google', t: Date.parse(x.d + 'T12:00Z')
+      aw: x.awake || 0, wu: x.wakeups, segs: x.segs || [], g: x.src === 'google', t: Date.parse(x.d + 'T12:00Z')
     })).filter(n => n.a >= 120 && n.on != null && n.wk != null).sort((a, b) => a.t - b.t);
     if (!N.length) { host.innerHTML = '<div class="card">No nights in nights.json.</div>'; return { redraw() {} }; }
     const LAST = N[N.length - 1];
     const mask = {}; (A && A.cpapDaily || []).forEach(c => { mask[c.d] = c.use || 0; });
 
-    let R = '365', GOAL = 480, ORDER = 'new';
+    let R = '365', GOAL = 480, ORDER = 'new', WTH = 20;
+    const median = a => { if (!a.length) return null; const s = a.slice().sort((x, y) => x - y), k = s.length >> 1; return s.length % 2 ? s[k] : (s[k - 1] + s[k]) / 2; };
+    // first long wake of a night: a gap of WTH+ minutes between two asleep segments (awake, in bed, or no data)
+    const wcache = new Map();
+    // every awake stretch of 5+ minutes between two asleep segments: [start, minutes awake, minutes since falling asleep]
+    const allWakes = new Map();
+    function nightWakes(n) {
+      if (allWakes.has(n.d)) return allWakes.get(n.d);
+      const sl = n.segs.filter(s => s[0] === 'deep' || s[0] === 'core' || s[0] === 'rem').map(s => [s[1], s[2]]).sort((a, b) => a[0] - b[0]);
+      const out = [];
+      if (sl.length) { const on = sl[0][0]; let cur = sl[0][1]; for (let i = 1; i < sl.length; i++) { if (sl[i][0] - cur >= 5) out.push([cur, sl[i][0] - cur, cur - on]); cur = Math.max(cur, sl[i][1]); } }
+      allWakes.set(n.d, out);
+      return out;
+    }
+    const HW = { win: 365, end: null, kind: 'all', src: 'both' };
+    function wakeInfo(n) {
+      const key = n.d + '|' + WTH;
+      if (wcache.has(key)) return wcache.get(key);
+      const sl = n.segs.filter(s => s[0] === 'deep' || s[0] === 'core' || s[0] === 'rem').map(s => [s[1], s[2]]).sort((a, b) => a[0] - b[0]);
+      let r = { long: false };
+      if (sl.length) {
+        const on = sl[0][0], end = sl.reduce((m, s) => Math.max(m, s[1]), 0);
+        let cur = sl[0][1], win = null, count = 0;
+        for (let i = 1; i < sl.length; i++) {
+          if (sl[i][0] - cur >= WTH) { count++; if (!win) win = [cur, sl[i][0]]; }
+          cur = Math.max(cur, sl[i][1]);
+        }
+        const asleepIn = (a, b) => sl.reduce((s, q) => s + Math.max(0, Math.min(q[1], b) - Math.max(q[0], a)), 0);
+        r = win
+          ? { long: true, on, end, start: win[0], stop: win[1], dur: win[1] - win[0], span: win[0] - on, slept: asleepIn(on, win[0]), after: asleepIn(win[1], end), count }
+          : { long: false, on, end, span: end - on, slept: asleepIn(on, end) };
+      }
+      wcache.set(key, r);
+      return r;
+    }
     const inRange = () => R === 'all' ? N : N.filter(n => n.t > LAST.t - (+R) * DAY);
     const rolling = (sel, f, win = 14) => sel.map(n => { const w = sel.filter(m => m.t <= n.t && m.t > n.t - win * DAY).map(f).filter(v => v != null); return w.length >= 4 ? mean(w) : null; });
     const linePath = (sel, vals, x, y) => { let d = '', prev = null; sel.forEach((n, i) => { const v = vals[i]; if (v == null) { prev = null; return; } d += (prev == null || n.t - prev > 21 * DAY ? 'M' : 'L') + x(n.t).toFixed(1) + ' ' + y(v).toFixed(1); prev = n.t; }); return d; };
@@ -203,7 +295,7 @@
       return [...m.entries()].map(([k, a]) => ({ k, a, n: a.length, asleep: mean(a.map(n => n.a)),
         on: mean(a.map(n => n.on).filter(ON_OK)), wk: mean(a.map(n => n.wk).filter(WK_OK)),
         sdOn: sd(a.map(n => n.on).filter(ON_OK)), sdWk: sd(a.map(n => n.wk).filter(WK_OK)),
-        p7: a.filter(n => n.a >= 420).length / a.length, deep: mean(a.map(n => n.deep).filter(Boolean)), rem: mean(a.map(n => n.rem).filter(Boolean)) }));
+        p7: a.filter(n => n.a >= 420).length / a.length, lw: a.filter(n => wakeInfo(n).long).length / a.length, fs: median(a.map(n => wakeInfo(n)).filter(w => w.long).map(w => w.span)), deep: mean(a.map(n => n.deep).filter(Boolean)), rem: mean(a.map(n => n.rem).filter(Boolean)) }));
     };
 
     function timeAxis(svg, x, t0, t1, top, bottom, H) {
@@ -323,14 +415,86 @@
       $('hb-debt-find').textContent = now + (v.length ? ` Across this range the 14-night debt averaged ${hm(mean(v))}.` : '');
     }
 
+    function wakes(sel) {
+      const info = sel.map(n => ({ n, w: wakeInfo(n) })).filter(x => x.w.on != null);
+      const lw = info.filter(x => x.w.long);
+      const pct = info.length ? Math.round(100 * lw.length / info.length) : 0;
+      const med = f => median(lw.map(x => f(x.w)));
+      $('hb-wk-find').textContent = !lw.length ? `No awake stretches of ${WTH}+ minutes in this range.` :
+        `On ${pct}% of nights (${lw.length} of ${info.length}) you had a wake of ${WTH}+ minutes. On those nights you typically slept ${hm(med(w => w.slept))} first, were awake for ${Math.round(med(w => w.dur))} min, then slept ${hm(med(w => w.after))} more.`;
+      const noWake = info.filter(x => !x.w.long);
+      // the watches record wake differently, so show the share per device when both are in range
+      const share = g => { const s = info.filter(x => x.n.g === g); return s.length ? Math.round(100 * s.filter(x => x.w.long).length / s.length) + '%' : null; };
+      const ap = share(false), gg = share(true);
+      const bySrc = ap && gg ? `<br>Apple Watch ${ap} · Pixel Watch ${gg}` : '';
+      const tl = [
+        ['Nights with a long wake', pct + '%', `${lw.length} of ${info.length} nights · ${WTH}+ min awake` + bySrc],
+        ['First stretch, median', lw.length ? hm(med(w => w.span)) : '—', lw.length ? `${hm(med(w => w.slept))} of it asleep` : ''],
+        ['Awake, median', lw.length ? Math.round(med(w => w.dur)) + ' min' : '—', 'length of the first long wake'],
+        ['Sleep after it, median', lw.length ? hm(med(w => w.after)) : '—', lw.length ? `on ${Math.round(100 * lw.filter(x => x.w.after >= 60).length / lw.length)}% of these nights, 1 h or more` : ''],
+        ['Asleep: long-wake nights', lw.length ? hm(mean(lw.map(x => x.n.a))) : '—', noWake.length ? `vs ${hm(mean(noWake.map(x => x.n.a)))} on other nights` : ''],
+      ];
+      $('hb-wk-tiles').innerHTML = tl.map(([l, v, d]) => `<div class="tile"><div class="l">${l}</div><div class="v">${v}</div><div class="d">${d}</div></div>`).join('');
+
+      // one bar per night, measured from falling asleep
+      const box = $('hb-wk-bars'); box.innerHTML = '';
+      const W = Math.max(600, box.clientWidth || 1000), H = 250, L = 40, Rr = 10, T = 8, B = 22, MAXH = 720;
+      const svg = el('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': 'Each night from falling asleep: first stretch, first long wake, and sleep after it' }, box);
+      const t0 = sel[0].t, t1 = LAST.t, x = t => L + (t - t0) / Math.max(1, t1 - t0) * (W - L - Rr), y = m => T + Math.min(MAXH, Math.max(0, m)) / MAXH * (H - T - B);
+      for (let m = 0; m <= MAXH; m += 120) { el('line', { x1: L, x2: W - Rr, y1: y(m), y2: y(m), stroke: css('--grid') }, svg); el('text', { x: L - 6, y: y(m) + 3, 'text-anchor': 'end' }, svg).textContent = m / 60 + 'h'; }
+      timeAxis(svg, x, t0, t1, T, H - B, H);
+      const bw = Math.max(1, (W - L - Rr) / ((t1 - t0) / DAY + 1) * 0.8);
+      info.forEach(({ n, w }) => {
+        const bx = x(n.t) - bw / 2, g = el('g', {}, svg);
+        if (!w.long) el('rect', { x: bx, y: y(0), width: bw, height: Math.max(1, y(w.span) - y(0)), fill: css('--nowake') }, g);
+        else {
+          el('rect', { x: bx, y: y(0), width: bw, height: Math.max(1, y(w.span) - y(0)), fill: css('--sleep') }, g);
+          el('rect', { x: bx, y: y(w.span), width: bw, height: Math.max(1, y(w.span + w.dur) - y(w.span)), fill: css('--wakewin') }, g);
+          el('rect', { x: bx, y: y(w.span + w.dur), width: bw, height: Math.max(0, y(w.end - w.on) - y(w.span + w.dur)), fill: css('--after') }, g);
+        }
+        hover(g, w.long
+          ? `${fmtD(n.d)}<br>asleep ${clock(w.on)}<br>first stretch <b>${hm(w.span)}</b> (slept ${hm(w.slept)})<br>awake <b>${Math.round(w.dur)} min</b>, ${clock(w.start)}–${clock(w.stop)}<br>then slept ${hm(w.after)}${w.count > 1 ? `<br>${w.count} long wakes in total` : ''}`
+          : `${fmtD(n.d)}<br>no wake of ${WTH}+ min<br>slept ${hm(w.slept)} through to ${clock(w.end)}`);
+      });
+      const rm = sel.map(n => { const v = sel.filter(m => m.t <= n.t && m.t > n.t - 14 * DAY).map(wakeInfo).filter(w => w.long).map(w => w.span); return v.length >= 3 ? median(v) : null; });
+      el('path', { d: linePath(sel, rm, x, y), fill: 'none', stroke: css('--bed'), 'stroke-width': 2, 'stroke-linejoin': 'round' }, svg);
+
+      // histogram: first stretch length
+      const hist = (id, vals, lo, hi, step, lab, extra) => {
+        const hb = $(id); hb.innerHTML = '';
+        const HW = Math.max(320, hb.clientWidth || 500), HH = 180, HL = 30, HR = 6, HT = 14, HB = 22, nb = Math.round((hi - lo) / step);
+        const cnt = Array(nb).fill(0), grp = Array.from({ length: nb }, () => []);
+        vals.forEach(([v, e]) => { const b = Math.max(0, Math.min(nb - 1, Math.floor((v - lo) / step))); cnt[b]++; grp[b].push(e); });
+        const mx = Math.max(1, ...cnt), bwid = (HW - HL - HR) / nb;
+        const hs = el('svg', { viewBox: `0 0 ${HW} ${HH}`, role: 'img', 'aria-label': lab }, hb);
+        const yy = c => HT + (1 - c / mx) * (HH - HT - HB);
+        [0, Math.ceil(mx / 2), mx].forEach(c => { el('line', { x1: HL, x2: HW - HR, y1: yy(c), y2: yy(c), stroke: css('--grid') }, hs); el('text', { x: HL - 5, y: yy(c) + 3, 'text-anchor': 'end' }, hs).textContent = c; });
+        cnt.forEach((c, i) => {
+          const r = el('rect', { x: HL + i * bwid + 1, y: yy(c), width: Math.max(1, bwid - 2), height: yy(0) - yy(c), fill: css(extra.color), rx: 1.5 }, hs);
+          hover(r, extra.tip(lo + i * step, c, grp[i]));
+          if (extra.top && c) el('text', { x: HL + i * bwid + bwid / 2, y: yy(c) - 3, 'text-anchor': 'middle', style: 'font-size:9px' }, hs).textContent = extra.top(grp[i]);
+          if (i % extra.every === 0) el('text', { x: HL + i * bwid, y: HH - 6 }, hs).textContent = extra.x(lo + i * step);
+        });
+      };
+      hist('hb-wk-hist', lw.map(x => [x.w.span, x.w]), 0, 480, 30, 'Histogram of the first stretch of sleep', {
+        color: '--sleep', every: 2, x: v => v / 60 + 'h',
+        tip: (v, c) => `first stretch ${hm(v)}–${hm(v + 30)}<br><b>${c}</b> nights`
+      });
+      hist('hb-wk-clock', lw.map(x => [x.w.start, x.w]), 60, 660, 30, 'When the first long wake starts', {
+        color: '--wakewin', every: 4, x: v => clock(v).replace(':00', ''),
+        top: g => Math.round(median(g.map(w => w.dur))) + 'm',
+        tip: (v, c, g) => `${clock(v)}–${clock(v + 30)}<br><b>${c}</b> nights${g.length ? `<br>median awake ${Math.round(median(g.map(w => w.dur)))} min` : ''}`
+      });
+    }
+
     function mom(sel) {
       const ms = months(sel).filter(m => m.n >= 5);
       if (!ms.length) { $('hb-mom').innerHTML = ''; $('hb-mom-find').textContent = ''; return; }
       const prev = new Map(ms.map((m, i) => [m.k, ms[i - 1]]));
       const arrow = (v, p, good) => { if (p == null || v == null) return ''; const d = v - p; if (Math.abs(d) < 5) return '<span class="sub">·</span>'; const ok = good === 'up' ? d > 0 : good === 'down' ? d < 0 : null; return `<span class="${ok == null ? '' : ok ? 'up' : 'dn'}">${d > 0 ? '▲' : '▼'}${Math.round(Math.abs(d))}</span>`; };
       const rows = ORDER === 'old' ? ms : ms.slice().reverse(), maxA = Math.max(...ms.map(m => m.asleep));
-      $('hb-mom').innerHTML = '<thead><tr><th>Month</th><th>Nights</th><th style="text-align:left">Asleep</th><th>Δ</th><th>Bedtime</th><th>Δ</th><th>Wake</th><th>Δ</th><th>Bedtime spread</th><th>≥ 7 h</th><th>Deep</th><th>REM</th></tr></thead><tbody>' +
-        rows.map(m => { const p = prev.get(m.k); return `<tr><td>${monLab(m.k)}</td><td>${m.n}</td><td style="text-align:left"><span class="bar" style="width:${Math.round(80 * m.asleep / maxA)}px"></span>${hm(m.asleep)}</td><td>${arrow(m.asleep, p && p.asleep, 'up')}</td><td>${m.on != null ? clock(m.on) : '—'}</td><td>${arrow(m.on, p && p.on, 'down')}</td><td>${m.wk != null ? clock(m.wk) : '—'}</td><td>${arrow(m.wk, p && p.wk, 'none')}</td><td>${m.sdOn != null ? '±' + Math.round(m.sdOn) + ' min' : '—'}</td><td>${Math.round(100 * m.p7)}%</td><td>${m.deep ? Math.round(m.deep) + 'm' : '—'}</td><td>${m.rem ? Math.round(m.rem) + 'm' : '—'}</td></tr>`; }).join('') + '</tbody>';
+      $('hb-mom').innerHTML = '<thead><tr><th>Month</th><th>Nights</th><th style="text-align:left">Asleep</th><th>Δ</th><th>Bedtime</th><th>Δ</th><th>Wake</th><th>Δ</th><th>Bedtime spread</th><th>≥ 7 h</th><th>Deep</th><th>REM</th><th>Long wake</th><th>First stretch</th></tr></thead><tbody>' +
+        rows.map(m => { const p = prev.get(m.k); return `<tr><td>${monLab(m.k)}</td><td>${m.n}</td><td style="text-align:left"><span class="bar" style="width:${Math.round(80 * m.asleep / maxA)}px"></span>${hm(m.asleep)}</td><td>${arrow(m.asleep, p && p.asleep, 'up')}</td><td>${m.on != null ? clock(m.on) : '—'}</td><td>${arrow(m.on, p && p.on, 'down')}</td><td>${m.wk != null ? clock(m.wk) : '—'}</td><td>${arrow(m.wk, p && p.wk, 'none')}</td><td>${m.sdOn != null ? '±' + Math.round(m.sdOn) + ' min' : '—'}</td><td>${Math.round(100 * m.p7)}%</td><td>${m.deep ? Math.round(m.deep) + 'm' : '—'}</td><td>${m.rem ? Math.round(m.rem) + 'm' : '—'}</td><td>${Math.round(100 * m.lw)}%</td><td>${m.fs != null ? hm(m.fs) : '—'}</td></tr>`; }).join('') + '</tbody>';
       const full = ms.filter(m => m.n >= 12).length ? ms.filter(m => m.n >= 12) : ms;
       const best = full.reduce((a, b) => b.asleep > a.asleep ? b : a), worst = full.reduce((a, b) => b.asleep < a.asleep ? b : a);
       $('hb-mom-find').textContent = `Among months with 12 or more nights, the longest was ${monLab(best.k)} (${hm(best.asleep)} a night) and the shortest was ${monLab(worst.k)} (${hm(worst.asleep)}).`;
@@ -410,20 +574,96 @@
       $('hb-cpap-find').textContent = on.length && off.length ? `On CPAP nights you slept ${hm(Math.abs(d))} ${d >= 0 ? 'more' : 'less'} on average than on other nights in the same period.` : '';
     }
 
+    // ---------- wake heatmaps (square cells)
+    const DUR = [[5, 10, '5–10m'], [10, 15, '10–15m'], [15, 20, '15–20m'], [20, 30, '20–30m'], [30, 45, '30–45m'], [45, 60, '45–60m'], [60, 90, '60–90m'], [90, 120, '90–120m'], [120, 1e9, '2h+']];
+    const durRow = m => DUR.findIndex(([a, b]) => m >= a && m < b);
+    const srcOk = n => HW.src === 'both' || (HW.src === 'google') === n.g;
+    function sqHeat(id, ws, colOf, cols, colLab, colTip, every) {
+      const box = $(id); box.innerHTML = '';
+      const avail = Math.max(360, box.clientWidth || 600), L = 62, R = 64, T = 46, B = 24, rows = DUR.length;
+      const cs = Math.max(14, Math.min(30, Math.floor((avail - L - R) / cols)));
+      const W = L + cols * cs + R, H = T + rows * cs + B;
+      const svg = el('svg', { class: 'fixed', viewBox: `0 0 ${W} ${H}`, width: W, height: H, role: 'img' }, box);
+      const grid = Array.from({ length: rows }, () => Array(cols).fill(0)), cell = Array.from({ length: rows }, () => Array.from({ length: cols }, () => []));
+      ws.forEach(w => { const c = colOf(w), r = durRow(w.dur); if (c < 0 || c >= cols || r < 0) return; grid[r][c]++; cell[r][c].push(w); });
+      const mx = Math.max(1, ...grid.flat()), pal = RDYLGN.slice().reverse();   // more wakes = redder
+      const lvl = c => c === 0 ? -1 : Math.min(5, Math.floor(6 * Math.sqrt(c / mx) - 1e-9));
+      DUR.forEach((d, r) => el('text', { x: L - 6, y: T + r * cs + cs / 2 + 4, 'text-anchor': 'end' }, svg).textContent = d[2]);
+      el('text', { x: L - 6, y: T - 32, 'text-anchor': 'end', style: 'font-weight:600' }, svg).textContent = 'awake';
+      for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+        const v = grid[r][c], lv = lvl(v);
+        const rect = el('rect', { x: L + c * cs, y: T + r * cs, width: cs, height: cs, fill: lv < 0 ? css('--empty') : pal[lv], stroke: '#fff', 'stroke-width': 1.5 }, svg);
+        if (v && cs >= 22) el('text', { x: L + c * cs + cs / 2, y: T + r * cs + cs / 2 + 3.5, 'text-anchor': 'middle', style: `font-size:9.5px;font-weight:600;fill:${lv >= 4 ? '#fff' : '#111418'};pointer-events:none` }, svg).textContent = v;
+        const ex = cell[r][c].slice(-3).map(w => `${fmtD(w.n.d)} · ${clock(w.s)} · ${Math.round(w.dur)}m`).join('<br>');
+        hover(rect, `${colTip(c)}<br>awake ${DUR[r][2]}<br><b>${v}</b> wake${v === 1 ? '' : 's'}${ex ? '<br><span style="opacity:.7">latest:<br>' + ex + '</span>' : ''}`);
+      }
+      el('rect', { x: L, y: T, width: cols * cs, height: rows * cs, fill: 'none', stroke: css('--monthline'), 'stroke-width': 1.5 }, svg);
+      el('line', { x1: L, x2: L + cols * cs, y1: T + 3 * cs, y2: T + 3 * cs, stroke: css('--monthline'), 'stroke-width': 2 }, svg);
+      el('text', { x: L + cols * cs + 4, y: T + 3 * cs + 3, style: 'font-size:9px' }, svg).textContent = '20m';
+      const colT = Array.from({ length: cols }, (_, c) => grid.reduce((s, row) => s + row[c], 0)), rowT = grid.map(r => r.reduce((a, b) => a + b, 0));
+      const mc = Math.max(1, ...colT), mr = Math.max(1, ...rowT), barC = pal[1];
+      colT.forEach((v, c) => { const h = 26 * v / mc; const b = el('rect', { x: L + c * cs + 2, y: T - 6 - h, width: cs - 4, height: h, fill: barC }, svg); hover(b, `${colTip(c)}<br><b>${v}</b> wakes in total`); });
+      rowT.forEach((v, r) => { const w = (R - 40) * v / mr; const b = el('rect', { x: L + cols * cs + 26, y: T + r * cs + 4, width: w, height: cs - 8, fill: barC }, svg); hover(b, `awake ${DUR[r][2]}<br><b>${v}</b> wakes in total`); if (v) el('text', { x: L + cols * cs + 29 + w, y: T + r * cs + cs / 2 + 3, style: 'font-size:9px' }, svg).textContent = v; });
+      for (let c = 0; c < cols; c += every) el('text', { x: L + c * cs, y: H - 6 }, svg).textContent = colLab(c);
+    }
+    function wakeHeat() {
+      if (HW.end == null) HW.end = LAST.t;
+      const ns = N.filter(n => n.t > HW.end - HW.win * DAY && n.t <= HW.end && srcOk(n));
+      const ws = [];
+      ns.forEach(n => {
+        const nw = nightWakes(n);
+        if (HW.kind === 'all') nw.forEach(w => ws.push({ n, s: w[0], dur: w[1], since: w[2] }));
+        else { const w = nw.find(w => w[1] >= 20); if (w) ws.push({ n, s: w[0], dur: w[1], since: w[2] }); }
+      });
+      const start = HW.end - HW.win * DAY + DAY;
+      $('hb-wh-cover').textContent = `${fmtD(new Date(Math.max(start, N[0].t)).toISOString().slice(0, 10))} – ${fmtD(new Date(HW.end).toISOString().slice(0, 10))} · ${ns.length} nights · ${ws.length} ${HW.kind === 'all' ? 'wakes of 5 min+' : 'first long wakes'}`;
+      $('hb-wh-prev').disabled = start <= N[0].t; $('hb-wh-next').disabled = HW.end >= LAST.t;
+      sqHeat('hb-wh1', ws, w => Math.floor((w.s - 60) / 30), 24, c => clock(60 + c * 30).replace(':00', ''), c => `${clock(60 + c * 30)}–${clock(90 + c * 30)}`, 4);
+      sqHeat('hb-wh2', ws, w => Math.floor(w.since / 30), 20, c => (c / 2) + 'h', c => `${c / 2}–${(c + 1) / 2} h after falling asleep`, 2);
+      const long = ws.filter(w => w.dur >= 20);
+      if (!ws.length) { $('hb-wh-find').textContent = 'No wakes in this window.'; return; }
+      const cnt = Array(24).fill(0); long.forEach(w => { const i = Math.floor((w.s - 60) / 30); if (i >= 0 && i < 24) cnt[i]++; });
+      const peak = cnt.indexOf(Math.max(...cnt));
+      $('hb-wh-find').textContent = `${ws.length} wakes in ${ns.length} nights; ${long.length} lasted 20 min or more` + (long.length ? ` (median ${Math.round(median(long.map(w => w.dur)))} min). Long wakes came most often around ${clock(60 + peak * 30)}, a median of ${(median(long.map(w => w.since)) / 60).toFixed(1)} h after falling asleep.` : '.');
+    }
+
+    // ---------- calendar heatmap, colored by a chosen measure (green = good night)
+    const firstStretch = n => { const w = nightWakes(n).find(w => w[1] >= 20); return w ? w[2] : n.wk - n.on; };
+    const CM = {
+      asleep: { l: 'Hours asleep', get: n => n.a, bins: [300, 360, 420, 480, 540], fmt: hm, lab: ['<5h', '5–6h', '6–7h', '7–8h', '8–9h', '9h+'], good: 'high' },
+      awake: { l: 'Awake in the night', get: n => nightWakes(n).reduce((s, w) => s + w[1], 0), bins: [10, 20, 40, 60, 90], fmt: v => Math.round(v) + ' min', lab: ['<10m', '10–20m', '20–40m', '40–60m', '60–90m', '90m+'], good: 'low' },
+      longest: { l: 'Longest wake', get: n => nightWakes(n).reduce((m, w) => Math.max(m, w[1]), 0), bins: [5, 15, 20, 30, 60], fmt: v => v ? Math.round(v) + ' min' : 'none', lab: ['none', '5–15m', '15–20m', '20–30m', '30–60m', '60m+'], good: 'low' },
+      stretch: { l: 'First unbroken stretch', get: firstStretch, bins: [120, 180, 240, 300, 360], fmt: hm, lab: ['<2h', '2–3h', '3–4h', '4–5h', '5–6h', '6h+'], good: 'high' },
+      bedtime: { l: 'Bedtime', get: n => n.on, bins: [60, 120, 180, 240, 300], fmt: clock, lab: ['<10 PM', '10–11 PM', '11–12', '12–1 AM', '1–2 AM', '2 AM+'], good: 'low' },
+      deep: { l: 'Deep sleep', get: n => n.deep, bins: [30, 45, 60, 75, 90], fmt: v => Math.round(v) + ' min', lab: ['<30m', '30–45m', '45–60m', '60–75m', '75–90m', '90m+'], good: 'high' },
+    };
+    let CAL = 'asleep';
+    const binOf = (v, bins) => { let i = 0; while (i < bins.length && v >= bins[i]) i++; return i; };
     function cal(sel) {
       const box = $('hb-cal'); box.innerHTML = '';
-      const years = [...new Set(sel.map(n => n.d.slice(0, 4)))].reverse(), byD = new Map(sel.map(n => [n.d, n]));
-      const W = Math.max(720, box.clientWidth || 1000), L = 40, cs = Math.min(13, (W - L) / 54), yh = cs * 7 + 26;
-      const svg = el('svg', { viewBox: `0 0 ${W} ${years.length * yh + 4}`, role: 'img', 'aria-label': 'Calendar of hours asleep' }, box);
-      const ramp = ['--h1', '--h2', '--h3', '--h4', '--h5'].map(css), blank = css('--h0');
+      const M = CM[CAL], pal = M.good === 'high' ? RDYLGN : RDYLGN.slice().reverse();
+      $('hb-cal-leg').innerHTML = `<span>${M.l}:</span>` + M.lab.map((l, i) => `<span class="ckey"><i style="background:${pal[i]}"></i>${l}</span>`).join('') + '<span class="ckey"><i style="background:#fff;border:1px solid var(--line)"></i>no data</span>';
+      const byD = new Map(N.map(n => [n.d, n])), inSel = new Set(sel.map(n => n.d));
+      const y1 = +LAST.d.slice(0, 4), y0 = Math.min(+sel[0].d.slice(0, 4), y1 - 1);
+      const years = []; for (let y = y1; y >= y0; y--) if (y === y1 || y === y1 - 1 || N.some(n => n.d.startsWith(String(y)))) years.push(y);
+      const avail = Math.max(700, box.clientWidth || 1000), L = 70, cs = Math.max(12, Math.min(20, Math.floor((avail - L - 8) / 54)));
+      const yh = cs * 7 + 30, W = L + cs * 54 + 8, H = years.length * yh + 4;
+      const svg = el('svg', { class: 'fixed', viewBox: `0 0 ${W} ${H}`, width: W, height: H, role: 'img', 'aria-label': 'Calendar heatmap, ' + M.l }, box);
       years.forEach((yr, yi) => {
-        const y0 = yi * yh + 14, jan1 = Date.UTC(+yr, 0, 1, 12), off = new Date(jan1).getUTCDay();
-        el('text', { x: 0, y: y0 + cs * 3.5 + 4, style: `font-weight:600;fill:${css('--ink')}` }, svg).textContent = yr;
-        MON.forEach((m, i) => { const t = Date.UTC(+yr, i, 1, 12); el('text', { x: L + Math.floor(((t - jan1) / DAY + off) / 7) * cs, y: y0 - 3 }, svg).textContent = m; });
-        for (let t = jan1; new Date(t).getUTCFullYear() === +yr; t += DAY) {
-          const day = Math.round((t - jan1) / DAY), wk = Math.floor((day + off) / 7), wd = new Date(t).getUTCDay(), d = new Date(t).toISOString().slice(0, 10), n = byD.get(d);
-          const r = el('rect', { x: L + wk * cs, y: y0 + wd * cs, width: cs - 1.5, height: cs - 1.5, rx: 2, fill: n ? ramp[n.a < 300 ? 0 : n.a < 360 ? 1 : n.a < 420 ? 2 : n.a < 480 ? 3 : 4] : blank }, svg);
-          if (n) hover(r, `${fmtD(d)}<br>asleep <b>${hm(n.a)}</b><br>${clock(n.on)} → ${clock(n.wk)}`);
+        const top = yi * yh + 22, jan1 = Date.UTC(yr, 0, 1, 12), off = new Date(jan1).getUTCDay();
+        const g = el('g', { transform: `translate(${L} ${top})` }, svg);
+        el('text', { x: -L + 4, y: cs * 3.5 + 5, style: `font-size:14px;font-weight:600;fill:${css('--ink')}`, transform: `rotate(-90 ${-L + 14} ${cs * 3.5})` }, g).textContent = yr;
+        DOW.forEach((d, i) => el('text', { x: -6, y: i * cs + cs / 2 + 4, 'text-anchor': 'end' }, g).textContent = d);
+        const pos = t => { const day = Math.round((t - jan1) / DAY); return [Math.floor((day + off) / 7), new Date(t).getUTCDay()]; };
+        for (let t = jan1; new Date(t).getUTCFullYear() === yr; t += DAY) {
+          const [wk, wd] = pos(t), d = new Date(t).toISOString().slice(0, 10), n = byD.get(d), v = n ? M.get(n) : null;
+          const r = el('rect', { x: wk * cs, y: wd * cs, width: cs, height: cs, fill: v == null ? '#fff' : pal[binOf(v, M.bins)], stroke: css('--line'), 'stroke-width': 0.8, opacity: v == null || inSel.has(d) ? 1 : 0.3 }, g);
+          if (v != null) { const nw = nightWakes(n); hover(r, `${fmtD(d)}<br>${M.l}: <b>${M.fmt(v)}</b><br>asleep ${hm(n.a)} · ${clock(n.on)} → ${clock(n.wk)}<br>${nw.length ? `${nw.length} wake${nw.length > 1 ? 's' : ''} of 5 min+, longest ${Math.round(Math.max(...nw.map(w => w[1])))} min` : 'no wakes of 5 min+'}`); }
+        }
+        for (let m = 0; m < 12; m++) {
+          const [w0, d0] = pos(Date.UTC(yr, m, 1, 12)), [w1, d1] = pos(Date.UTC(yr, m + 1, 0, 12));
+          el('path', { d: `M${(w0 + 1) * cs},${d0 * cs}H${w0 * cs}V${7 * cs}H${w1 * cs}V${(d1 + 1) * cs}H${(w1 + 1) * cs}V0H${(w0 + 1) * cs}Z`, fill: 'none', stroke: css('--monthline'), 'stroke-width': 2 }, g);
+          el('text', { x: (w0 + w1 + 1) / 2 * cs, y: -6, 'text-anchor': 'middle', style: `font-size:12px;fill:${css('--ink2')}` }, g).textContent = MON[m];
         }
       });
     }
@@ -434,15 +674,23 @@
       $('hb-cover').textContent = `${sel.length} nights · ${fmtD(sel[0].d)} – ${fmtD(LAST.d)} · ${sel.some(n => n.g) ? 'Apple Watch + Google Health' : 'Apple Watch'}`;
       tiles(sel); trend(sel); windowChart(sel);
       heat('hb-hm-bed', sel, 'on', -60, 360, '--bed'); heat('hb-hm-wake', sel, 'wk', 360, 900, '--wake');
-      debt(sel); mom(sel);
+      debt(sel); wakes(sel); mom(sel);
       monthLines('hb-cons', sel, [['sdOn', '--bed'], ['sdWk', '--wake']], 0, 160, 'm', 'Bedtime and wake time spread per month');
       monthLines('hb-stages', sel.filter(n => n.deep || n.rem), [['deep', '--deep'], ['rem', '--rem']], 0, 160, 'm', 'Deep and REM minutes per month');
       dow(sel); yoy(); cpap();
-      cal(sel.length < 200 ? N.filter(n => n.t > LAST.t - 365 * DAY) : sel);
+      wakeHeat(); cal(sel);
     }
     const press = (sel, b) => host.querySelectorAll(sel).forEach(x => x.setAttribute('aria-pressed', String(x === b)));
     host.querySelectorAll('[data-r]').forEach(b => b.onclick = () => { R = b.dataset.r; press('[data-r]', b); render(); });
     host.querySelectorAll('[data-g]').forEach(b => b.onclick = () => { GOAL = +b.dataset.g; press('[data-g]', b); tiles(inRange()); debt(inRange()); });
+    host.querySelectorAll('[data-w]').forEach(b => b.onclick = () => { WTH = +b.dataset.w; press('[data-w]', b); wakes(inRange()); mom(inRange()); });
+    $('hb-cal-metrics').innerHTML = Object.entries(CM).map(([k, m]) => `<button type="button" data-cm="${k}" aria-pressed="${k === CAL}">${m.l}</button>`).join('');
+    host.querySelectorAll('[data-cm]').forEach(b => b.onclick = () => { CAL = b.dataset.cm; press('[data-cm]', b); cal(inRange()); });
+    host.querySelectorAll('[data-hw]').forEach(b => b.onclick = () => { HW.win = +b.dataset.hw; press('[data-hw]', b); wakeHeat(); });
+    host.querySelectorAll('[data-hk]').forEach(b => b.onclick = () => { HW.kind = b.dataset.hk; press('[data-hk]', b); wakeHeat(); });
+    host.querySelectorAll('[data-hs]').forEach(b => b.onclick = () => { HW.src = b.dataset.hs; press('[data-hs]', b); wakeHeat(); });
+    $('hb-wh-prev').onclick = () => { HW.end = Math.max(N[0].t + HW.win * DAY, HW.end - HW.win * DAY); wakeHeat(); };
+    $('hb-wh-next').onclick = () => { HW.end = Math.min(LAST.t, HW.end + HW.win * DAY); wakeHeat(); };
     host.querySelectorAll('[data-s]').forEach(b => b.onclick = () => { ORDER = b.dataset.s; press('[data-s]', b); mom(inRange()); });
 
     render();
